@@ -8,7 +8,7 @@ from .const import DOMAIN
 
 SGCC_SENSORS = {
     "balance": {
-        "name": "余额",
+        "name": "电费余额",
         "icon": "hass:cash-100",
         "unit_of_measurement": "元"
     },

@@ -36,7 +36,7 @@ class SGCCData:
         response_headers = r.headers
         if "Set-Cookie" in response_headers:
             set_cookie = response_headers["Set-Cookie"]
-            self._session = set_cookie.split(";")[0]
+            self._session = set_cookie.split(";")[0].split("=")[1]
             _LOGGER.debug(f"Got new session {self._session}")
 
     def commonHeaders(self):
@@ -52,7 +52,7 @@ class SGCCData:
                           "(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.7(0x1800072c) "
                           "NetType/WIFI Language/zh_CN",
             "Connection": "keep-alive",
-            "Cookie": f"session={self._session}; user_openid={self._openid}"
+            "Cookie": f"SESSION={self._session}; user_openid={self._openid}"
         }
         return headers
 
@@ -125,16 +125,16 @@ class SGCCData:
                 if i == 0:
                     self._info[consNo]["history"] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
                     for i in range(1, period + 1):
-                        self._info[consNo]["history"][12 - i] = {}
-                        self._info[consNo]["history"][12 - i]["name"] = monthBills[period - i]["AMT_YM"]
-                        self._info[consNo]["history"][12 - i]["consume"] = monthBills[period - i]["SUM_ELEC"]
-                        self._info[consNo]["history"][12 - i]["consume_bill"] = monthBills[period - i]["SUM_ELECBILL"]
+                        self._info[consNo]["history"][11 - (12 - i)] = {}
+                        self._info[consNo]["history"][11 - (12 - i)]["name"] = monthBills[period - i]["AMT_YM"]
+                        self._info[consNo]["history"][11 - (12 - i)]["consume"] = monthBills[period - i]["SUM_ELEC"]
+                        self._info[consNo]["history"][11 - (12 - i)]["consume_bill"] = monthBills[period - i]["SUM_ELECBILL"]
                 else:
                     for i in range(12 - period):
-                        self._info[consNo]["history"][i] = {}
-                        self._info[consNo]["history"][i]["name"] = monthBills[period + i]["AMT_YM"]
-                        self._info[consNo]["history"][i]["consume"] = monthBills[period + i]["SUM_ELEC"]
-                        self._info[consNo]["history"][i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
+                        self._info[consNo]["history"][11 - i] = {}
+                        self._info[consNo]["history"][11 - i]["name"] = monthBills[period + i]["AMT_YM"]
+                        self._info[consNo]["history"][11 - i]["consume"] = monthBills[period + i]["SUM_ELEC"]
+                        self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
 
             else:
                 _LOGGER.error(f"getBillByYear error: {result['msg']}")
