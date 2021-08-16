@@ -1,0 +1,5 @@
+{
+    "name": "北京用电信息查询",
+    "domains": ["sensor"],
+    "render_readme": true
+}
