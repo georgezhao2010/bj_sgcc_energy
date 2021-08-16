@@ -25,7 +25,6 @@ bj_sgcc_energy:
 - 如果公众号中关联了多个北京国电用户，则支持多个用户用电信息的采集。
 - 支持实时用电单价实体，可用于Home Assistant 2021.8.X最新的能源模块的实时电费计算。
 
-该组件支持的组件如下
 ## 传感器
 包含(19 * 关联用户数)个传感器
 
@@ -41,11 +40,38 @@ bj_sgcc_energy:
 | sensor.XXXXXXXXXX_history_* | 过去12个月用电情况 |
 
 其中XXXXXXXXXX为北京国电用户户号， \*取值为1-12
+带有history的实体，属性name是月份，属性state是该月用电量，属性consume_bill为该月电费
 
 # 示例
-历史数据采用[flex-table-card](https://github.com/custom-cards/flex-table-card)展示，你也可以根据需要采用自己的展示形式
+历史数据采用[flex-table-card](https://github.com/custom-cards/flex-table-card)展示
+```
+type: vertical-stack
+cards:
+  - type: entities
+    entities:
+      - entity: sensor.XXXXXXXXXX_balance
+      - entity: sensor.XXXXXXXXXX_current_level
+      - entity: sensor.XXXXXXXXXX_current_level_consume
+      - entity: sensor.XXXXXXXXXX_current_level_remain
+      - entity: sensor.XXXXXXXXXX_current_price
+      - entity: sensor.XXXXXXXXXX_year_consume
+      - entity: sensor.XXXXXXXXXX_year_consume_bill
+    title: 家1
+  - type: custom:flex-table-card
+    title: 过去12个月用电情况
+    entities:
+      include: sensor.XXXXXXXXXX_history*
+    columns:
+      - name: 月份
+        data: name
+      - name: 用电量
+        data: state
+      - name: 电费
+        data: consume_bill
+```
 ![screenshot](https://user-images.githubusercontent.com/27534713/129530748-0f3d980b-357f-4538-b4b4-4f4f65e3df48.png)
 
+你也可以根据需要采用自己的展示形式
 
 # 特别鸣谢
 [瀚思彼岸论坛](https://bbs.hassbian.com/)的[@crazysiri](https://https://bbs.hassbian.com/thread-13355-1-1.html)，直接使用了他的部分代码。
