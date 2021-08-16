@@ -10,7 +10,8 @@ SGCC_SENSORS = {
     "balance": {
         "name": "电费余额",
         "icon": "hass:cash-100",
-        "unit_of_measurement": "元"
+        "unit_of_measurement": "元",
+        "attributes": ["last_update"]
     },
     "current_level": {
         "name": "当前用电阶梯",
@@ -62,13 +63,16 @@ class SGCCSensor(CoordinatorEntity):
         self._cons_no = cons_no
         self._sensor_key = sensor_key
         self._config = SGCC_SENSORS[self._sensor_key]
+        self._attributes = self._config.get("attributes")
         self._coordinator = coordinator
         self._unique_id = f"{DOMAIN}.{cons_no}_{sensor_key}"
         self.entity_id = self._unique_id
 
-    def get_value(self):
+    def get_value(self, attribute = None):
         try:
-            return self._coordinator.data.get(self._cons_no).get(self._sensor_key)
+            if attribute is None:
+                return self._coordinator.data.get(self._cons_no).get(self._sensor_key)
+            return self._coordinator.data.get(self._cons_no).get(attribute)
         except KeyError:
             return STATE_UNKNOWN
 
@@ -99,6 +103,17 @@ class SGCCSensor(CoordinatorEntity):
     @property
     def unit_of_measurement(self):
         return self._config.get("unit_of_measurement")
+
+    @property
+    def device_state_attributes(self):
+        attributes = {}
+        if self._attributes is not None:
+            try:
+                for attribute in self._attributes:
+                    attributes[attribute] = self.get_value(attribute)
+            except KeyError:
+                pass
+        return attributes
 
 
 class SGCCHistorySensor(CoordinatorEntity):

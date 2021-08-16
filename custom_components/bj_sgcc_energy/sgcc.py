@@ -24,7 +24,7 @@ class SGCCData:
             "Host": "weixin.bj.sgcc.com.cn",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Upgrade-Insecure-Requests": "1",
-            "Cookie": f"session={self._session}; user_openid={self._openid}",
+            "Cookie": f"SESSION={self._session}; user_openid={self._openid}",
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 "
                           "(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.7(0x1800072c) "
                           "NetType/WIFI Language/zh_CN",
@@ -124,11 +124,11 @@ class SGCCData:
                             break
                 if i == 0:
                     self._info[consNo]["history"] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-                    for i in range(1, period + 1):
-                        self._info[consNo]["history"][11 - (12 - i)] = {}
-                        self._info[consNo]["history"][11 - (12 - i)]["name"] = monthBills[period - i]["AMT_YM"]
-                        self._info[consNo]["history"][11 - (12 - i)]["consume"] = monthBills[period - i]["SUM_ELEC"]
-                        self._info[consNo]["history"][11 - (12 - i)]["consume_bill"] = monthBills[period - i]["SUM_ELECBILL"]
+                    for i in range(period):
+                        self._info[consNo]["history"][i] = {}
+                        self._info[consNo]["history"][i]["name"] = monthBills[period - i - 1]["AMT_YM"]
+                        self._info[consNo]["history"][i]["consume"] = monthBills[period - i - 1]["SUM_ELEC"]
+                        self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1]["SUM_ELECBILL"]
                 else:
                     for i in range(12 - period):
                         self._info[consNo]["history"][11 - i] = {}
