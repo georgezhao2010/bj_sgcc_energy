@@ -38,7 +38,7 @@ bj_sgcc_energy:
 | sensor.XXXXXXXXXX_current_price | 当前电价 |
 | sensor.XXXXXXXXXX_year_consume | 本年度用电量 |
 | sensor.XXXXXXXXXX_year_consume_bill | 本年度电费 |
-| sensor.XXXXXXXXXX_history_* | 过去12个月用电情况 | name - 月份<br/>state - 该月用电量<br/>consume_bill - 该月电费| \*取值为1-12<br/> |
+| sensor.XXXXXXXXXX_history_* | 过去12个月用电 | name - 月份<br/>consume_bill - 该月电费| \*取值为1-12<br/> |
 
 其中XXXXXXXXXX为北京国电用户户号
 
