@@ -28,6 +28,7 @@ bj_sgcc_energy:
 该组件支持的组件如下
 ## 传感器
 包含(19 * 关联用户数)个传感器
+
 |  entity_id形式   | 含义  |
 |  ----  | ----  |
 | sensor.XXXXXXXXXX_balance | 电费余额 |
