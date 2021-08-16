@@ -7,7 +7,8 @@
 
 使用任何网络抓包软件，如安卓手机的Fiddler， 苹果手机的Stream，进行抓包，过滤条件可以选择"HTTP"。抓包时在微营业厅上进行操作，查看一下用电信息。看到HTTP HEADER中有内容为“user_openid=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX”的内容，将user_openid=后的内容复制下来，如果最后是以\r\n结尾，则去掉\r\n，如果后部包含等于号"="，保留等于号。这个字符串就是openid，保存备用。
 
-![screenshot](https://user-images.githubusercontent.com/27534713/129526979-3ebd1685-51b0-4d86-923d-ca5695148d56.png)
+![screenshot](https://user-images.githubusercontent.com/27534713/129531245-c5190326-3258-4181-a8e9-e86598ff27bf.png)
+
 
 # 安装
 使用HACS以自定义存储库方式安装，或者从[Latest release](https://github.com/georgezhao2010/bj_sgcc_energy/releases/latest)下载最新的Release版本，将其中的`custom_components/bj_sgcc_engergy`放到你的Home Assistant的`custom_components/bj_sgcc_engergy`中。
