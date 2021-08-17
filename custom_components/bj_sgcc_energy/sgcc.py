@@ -97,7 +97,7 @@ class SGCCData:
             self._info[consNo]["current_price"] = billDetails["KWH_PRC"]
             key = LEVEL_CONSUME[self._info[consNo]["current_level"] - 1]
             self._info[consNo]["current_level_consume"] = int(data[key])
-            if self._info[consNo]["current_level"] < 2:
+            if self._info[consNo]["current_level"] < 3:
                 key = LEVEL_REMAIN[self._info[consNo]["current_level"] - 1]
                 self._info[consNo]["current_level_remain"] = int(data[key])
             self._info[consNo]["year_consume"] = data["TOTAL_ELEC"]
