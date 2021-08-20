@@ -74,5 +74,5 @@ cards:
 你也可以根据需要采用自己的展示形式
 
 # 特别鸣谢
-[瀚思彼岸论坛](https://bbs.hassbian.com/)的[@crazysiri](https://https://bbs.hassbian.com/thread-13355-1-1.html)，直接使用了他的部分代码。
+[瀚思彼岸论坛](https://bbs.hassbian.com/)的[@crazysiri](https://bbs.hassbian.com/thread-13355-1-1.html)，直接使用了他的部分代码。
 
