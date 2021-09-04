@@ -25,6 +25,8 @@ bj_sgcc_energy:
 - 如果公众号中关联了多个北京国电用户，则支持多个用户用电信息的采集。
 - 支持实时用电单价实体，可用于Home Assistant 2021.8.X最新的能源模块的实时电费计算。
 - 数据为定时更新，更新间隔为10分钟。
+- 支持北京市居民的阶梯用电计价策略
+- 支持北京市非居民的峰平谷用电计价策略(Beta)
 
 ## 传感器
 包含(19 * 关联用户数)个传感器
@@ -32,9 +34,10 @@ bj_sgcc_energy:
 | entity_id形式 | 含义 | 属性 | 备注 |
 | ---- | ---- | ---- | ---- |
 | sensor.XXXXXXXXXX_balance | 电费余额 | last_update - 网端数据更新时间 |
-| sensor.XXXXXXXXXX_current_level | 当前用电阶梯 |
-| sensor.XXXXXXXXXX_current_level_consume | 当前阶梯用电 |
-| sensor.XXXXXXXXXX_current_level_remain | 当前阶梯剩余额度 |
+| sensor.XXXXXXXXXX_current_level | 当前用电阶梯(峰平谷用户无此项) |
+| sensor.XXXXXXXXXX_current_level_consume | 当前阶梯用电(峰平谷用户无此项) |
+| sensor.XXXXXXXXXX_current_level_remain | 当前阶梯剩余额度(峰平谷用户无此项) |
+| sensor.XXXXXXXXXX_current_pgv_type | 当前电价类别(阶梯用户无此项) |
 | sensor.XXXXXXXXXX_current_price | 当前电价 |
 | sensor.XXXXXXXXXX_year_consume | 本年度用电量 |
 | sensor.XXXXXXXXXX_year_consume_bill | 本年度电费 |
