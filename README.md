@@ -37,7 +37,7 @@ bj_sgcc_energy:
 | sensor.XXXXXXXXXX_current_level | 当前用电阶梯(峰平谷用户无此项) |
 | sensor.XXXXXXXXXX_current_level_consume | 当前阶梯用电(峰平谷用户无此项) |
 | sensor.XXXXXXXXXX_current_level_remain | 当前阶梯剩余额度(峰平谷用户无此项) |
-| sensor.XXXXXXXXXX_current_pgv_type | 当前电价类别(阶梯用户无此项) |
+| sensor.XXXXXXXXXX_current_pgv_type | 当前电价类别(阶梯用户无此项) | |可能的值:峰、平、谷、尖峰(?)|
 | sensor.XXXXXXXXXX_current_price | 当前电价 |
 | sensor.XXXXXXXXXX_year_consume | 本年度用电量 |
 | sensor.XXXXXXXXXX_year_consume_bill | 本年度电费 |
