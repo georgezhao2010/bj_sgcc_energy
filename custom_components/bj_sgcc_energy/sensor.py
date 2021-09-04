@@ -49,9 +49,10 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
     sensors = []
     coordinator = hass.data[DOMAIN]
     data = coordinator.data
-    for cons_no in data.keys():
+    for cons_no, values in data.items():
         for key in SGCC_SENSORS.keys():
-            sensors.append(SGCCSensor(coordinator, cons_no, key))
+            if key in values.keys():
+                sensors.append(SGCCSensor(coordinator, cons_no, key))
         for month in range(12):
             sensors.append(SGCCHistorySensor(coordinator, cons_no, month))
     async_add_devices(sensors, True)

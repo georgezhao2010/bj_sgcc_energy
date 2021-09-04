@@ -42,11 +42,11 @@ class GJDWCorrdinator(DataUpdateCoordinator):
         _LOGGER.debug("Data updating...")
         data = self.data
         try:
-            async with async_timeout.timeout(20):
+            async with async_timeout.timeout(60):
                 data = await self._hass.async_add_executor_job(
                     self._sgcc.getData
                 )
         except asyncio.TimeoutError:
-            _LOGGER.debug("Data update timed out")
+            _LOGGER.warning("Data update timed out")
         return data
 
