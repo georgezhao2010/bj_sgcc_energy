@@ -15,9 +15,9 @@ LEVEL_CONSUME = ["levelOneSum", "levelTwoSum", "levelThreeSum"]
 LEVEL_REMAIN = ["levelOneRemain", "levelTwoRemain"]
 
 
-def get_price_key():
+def get_pgv_type():
     dt = datetime.datetime.now()
-    for pgc_price in PGC_PRICE.values():
+    for pgc_price in PGC_PRICE:
         # month is none or month matched
         if pgc_price.get("moon") is None or pgc_price.get("moon")[0] <= dt.month <= pgc_price.get("moon")[1]:
             slot_len = len(pgc_price.get("time_slot"))
@@ -28,7 +28,7 @@ def get_price_key():
                          (pgc_price.get("time_slot")[n][0] <= dt.hour or pgc_price.get("time_slot")[n][
                              1] > dt.hour)):
                     return pgc_price.get("key")
-    return None
+    return "Unknown"
 
 
 class SGCCData:
@@ -159,9 +159,9 @@ class SGCCData:
                             key = LEVEL_REMAIN[self._info[consNo]["current_level"] - 1]
                             self._info[consNo]["current_level_remain"] = int(data[key])
                     elif bill_size >= 3:
-                        price_key = get_price_key()
+                        pgv_type = get_pgv_type()
                         for n in range(0, bill_size):
-                            if data["billDetails"][n]["PRC_TS_NAME"] == price_key:
+                            if data["billDetails"][n]["PRC_TS_NAME"] == pgv_type:
                                 self._info[consNo]["current_price"] = data["billDetails"][n]["KWH_PRC"]
                                 break;
                     self._info[consNo]["year_consume"] = data["TOTAL_ELEC"]

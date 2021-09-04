@@ -41,6 +41,10 @@ SGCC_SENSORS = {
         "name": "本年度电费",
         "icon": "hass:cash-100",
         "unit_of_measurement": "元"
+    },
+    "current_pgv_type": {
+        "name": "当前电价类别",
+        "icon": "hass:cash-100"
     }
 }
 
