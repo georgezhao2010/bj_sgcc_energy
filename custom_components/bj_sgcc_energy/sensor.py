@@ -20,7 +20,7 @@ SGCC_SENSORS = {
     "current_price": {
         "name": "当前电价",
         "icon": "hass:cash-100",
-        "unit_of_measurement": "元"
+        "unit_of_measurement": "CNY/kWh"
     },
     "current_level_consume": {
         "name": "当前阶梯用电",
