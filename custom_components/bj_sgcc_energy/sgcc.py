@@ -215,15 +215,13 @@ class SGCCData:
                                 self._info[consNo]["history"][i] = {}
                                 self._info[consNo]["history"][i]["name"] = monthBills[period - i - 1]["AMT_YM"]
                                 self._info[consNo]["history"][i]["consume"] = monthBills[period - i - 1]["SUM_ELEC"]
-                                self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1][
-                                    "SUM_ELECBILL"]
+                                self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1]["SUM_ELECBILL"]
                         else:
                             for i in range(12 - period):
                                 self._info[consNo]["history"][11 - i] = {}
                                 self._info[consNo]["history"][11 - i]["name"] = monthBills[period + i]["AMT_YM"]
                                 self._info[consNo]["history"][11 - i]["consume"] = monthBills[period + i]["SUM_ELEC"]
-                                self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i][
-                                    "SUM_ELECBILL"]
+                                self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
                     else:
                         _LOGGER.error(f"getBillByYear error: {result['msg']}")
                 else:
