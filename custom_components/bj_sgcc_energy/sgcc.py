@@ -178,6 +178,7 @@ class SGCCData:
                                 break
                     self._info[consNo]["year_consume"] = data["TOTAL_ELEC"]
                     self._info[consNo]["year_consume_bill"] = data["TOTAL_ELECBILL"]
+                    self._info[consNo]["year"] = int(data["currentYear"])
                 else:
                     ret = False
                     _LOGGER.error(f"getDetail error: {result['msg']}")
