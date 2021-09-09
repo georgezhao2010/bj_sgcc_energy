@@ -15,18 +15,18 @@ LEVEL_CONSUME = ["levelOneSum", "levelTwoSum", "levelThreeSum"]
 LEVEL_REMAIN = ["levelOneRemain", "levelTwoRemain"]
 
 
-def get_pgv_type():
+def get_pgv_type(bill_range):
     dt = datetime.datetime.now()
     for pgc_price in PGC_PRICE:
         # month is none or month matched
         if pgc_price.get("moon") is None or pgc_price.get("moon")[0] <= dt.month <= pgc_price.get("moon")[1]:
             slot_len = len(pgc_price.get("time_slot"))
             for n in range(0, slot_len):
-                if (pgc_price.get("time_slot")[n][0] <= pgc_price.get("time_slot")[n][1] and
-                    pgc_price.get("time_slot")[n][0] <= dt.hour < pgc_price.get("time_slot")[n][1]) or \
-                        (pgc_price.get("time_slot")[n][0] > pgc_price.get("time_slot")[n][1] and
-                         (pgc_price.get("time_slot")[n][0] <= dt.hour or pgc_price.get("time_slot")[n][
-                             1] > dt.hour)):
+                if (((pgc_price.get("time_slot")[n][0] <= pgc_price.get("time_slot")[n][1] and
+                      pgc_price.get("time_slot")[n][0] <= dt.hour < pgc_price.get("time_slot")[n][1]) or
+                     (pgc_price.get("time_slot")[n][0] > pgc_price.get("time_slot")[n][1] and
+                      (pgc_price.get("time_slot")[n][0] <= dt.hour or pgc_price.get("time_slot")[n][1] > dt.hour))) and
+                        pgc_price.get("key") in bill_range):
                     return pgc_price.get("key")
     return "Unknown"
 
@@ -149,24 +149,35 @@ class SGCCData:
                 if result["status"] == 0:
                     data = result["data"]
                     bill_size = len(data["billDetails"])
-                    if bill_size == 1:
-                        billDetails = data["billDetails"][0]
-                        self._info[consNo]["current_level"] = int(billDetails["LEVEL_NUM"])
-                        self._info[consNo]["current_price"] = billDetails["KWH_PRC"]
+                    if data["isFlag"] == "1":  # 阶梯用户是否这么判断？ 瞎蒙的
+                        self._info[consNo]["current_level"] = 3
+                        for n in range(0, len(LEVEL_REMAIN)):
+                            if int(data[LEVEL_REMAIN[n]]) > 0:
+                                self._info[consNo]["current_level"] = n + 1
+                                break
+                        for n in range(0, bill_size):
+                            if int(data["billDetails"][n]["LEVEL_NUM"]) == self._info[consNo]["current_level"]:
+                                self._info[consNo]["current_price"] = data["billDetails"][n]["KWH_PRC"]
+                                break
                         key = LEVEL_CONSUME[self._info[consNo]["current_level"] - 1]
                         self._info[consNo]["current_level_consume"] = int(data[key])
                         if self._info[consNo]["current_level"] < 3:
                             key = LEVEL_REMAIN[self._info[consNo]["current_level"] - 1]
                             self._info[consNo]["current_level_remain"] = int(data[key])
-                    elif bill_size >= 3:
-                        pgv_type = get_pgv_type()
+                        else:
+                            self._info[consNo]["current_level_remain"] = "∞"
+                    else:
+                        bill_range = []
+                        for n in range(0, bill_size):
+                            bill_range.append(data["billDetails"][n]["PRC_TS_NAME"])
+                        pgv_type = get_pgv_type(bill_range)
                         for n in range(0, bill_size):
                             if data["billDetails"][n]["PRC_TS_NAME"] == pgv_type:
                                 self._info[consNo]["current_price"] = data["billDetails"][n]["KWH_PRC"]
-                                break;
+                                self._info[consNo]["current_pgv_type"] = data["billDetails"][n]["PRC_TS_NAME"]
+                                break
                     self._info[consNo]["year_consume"] = data["TOTAL_ELEC"]
                     self._info[consNo]["year_consume_bill"] = data["TOTAL_ELECBILL"]
-                    self._info[consNo]["year"] = int(data["currentYear"])
                 else:
                     ret = False
                     _LOGGER.error(f"getDetail error: {result['msg']}")
@@ -203,13 +214,15 @@ class SGCCData:
                                 self._info[consNo]["history"][i] = {}
                                 self._info[consNo]["history"][i]["name"] = monthBills[period - i - 1]["AMT_YM"]
                                 self._info[consNo]["history"][i]["consume"] = monthBills[period - i - 1]["SUM_ELEC"]
-                                self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1]["SUM_ELECBILL"]
+                                self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1][
+                                    "SUM_ELECBILL"]
                         else:
                             for i in range(12 - period):
                                 self._info[consNo]["history"][11 - i] = {}
                                 self._info[consNo]["history"][11 - i]["name"] = monthBills[period + i]["AMT_YM"]
                                 self._info[consNo]["history"][11 - i]["consume"] = monthBills[period + i]["SUM_ELEC"]
-                                self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
+                                self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i][
+                                    "SUM_ELECBILL"]
                     else:
                         _LOGGER.error(f"getBillByYear error: {result['msg']}")
                 else:
@@ -225,4 +238,3 @@ class SGCCData:
                 self.getBillByYear(consNo)
             _LOGGER.debug(f"Data {self._info}")
         return self._info
-
