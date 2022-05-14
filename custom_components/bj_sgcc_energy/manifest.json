@@ -1,11 +1,11 @@
 {
   "domain": "bj_sgcc_energy",
   "name": "北京用电信息查询",
-  "version": "v0.1.2",
-  "documentation": "https://github.com/ming4J/bj_sgcc_energy",
-  "issue_tracker": "https://github.com/ming4J/bj_sgcc_energy/issues",
+  "version": "v0.1.1",
+  "documentation": "https://github.com/georgezhao2010/bj_sgcc_energy",
+  "issue_tracker": "https://github.com/georgezhao2010/bj_sgcc_energy/issues",
   "iot_class": "cloud_polling",
   "dependencies": [],
   "requirements": [],
-  "codeowners": ["@ming4J"]
+  "codeowners": ["@georgezhao2010"]
 }
