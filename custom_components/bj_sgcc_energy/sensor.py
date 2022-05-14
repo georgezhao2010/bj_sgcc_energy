@@ -110,7 +110,7 @@ class SGCCSensor(CoordinatorEntity):
         return self._config.get("unit_of_measurement")
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         attributes = {}
         if self._attributes is not None:
             try:
