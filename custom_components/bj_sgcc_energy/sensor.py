@@ -110,7 +110,7 @@ class SGCCSensor(CoordinatorEntity):
         return self._config.get("unit_of_measurement")
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         attributes = {}
         if self._attributes is not None:
             try:
@@ -153,7 +153,7 @@ class SGCCHistorySensor(CoordinatorEntity):
             return STATE_UNKNOWN
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         try:
             return {
                 "consume_bill": self._coordinator.data.get(self._cons_no).get("history")[self._index].get("consume_bill")
