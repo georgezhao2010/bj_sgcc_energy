@@ -10,6 +10,7 @@ CONSNO_URL = "http://weixin.bj.sgcc.com.cn/ott/app/follower/consumer/prepaid/lis
 REMAIN_URL = "http://weixin.bj.sgcc.com.cn/ott/app/elec/account/query"
 DETAIL_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/overview"
 BILLINFO_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/queryElecBillInfoEveryYear"
+DAILYBILL_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/daily"
 
 LEVEL_CONSUME = ["levelOneSum", "levelTwoSum", "levelThreeSum"]
 LEVEL_REMAIN = ["levelOneRemain", "levelTwoRemain"]
@@ -117,7 +118,7 @@ class SGCCData:
         }
         ret = True
         try:
-            r = requests.post(REMAIN_URL, data, headers=headers, timeout=10)
+            r = requests.post(REMAIN_URL, data=data, headers=headers, timeout=10)
             if r.status_code == 200:
                 _LOGGER.debug(f"getBalance response: {r.text}")
                 result = r.json()
@@ -142,7 +143,7 @@ class SGCCData:
         }
         ret = True
         try:
-            r = requests.get(DETAIL_URL, params=params, headers=headers, timeout=10)
+            r = requests.get(DETAIL_URL, data=params, headers=headers, timeout=10)
             if r.status_code == 200:
                 _LOGGER.debug(f"getDetail response: {r.text}")
                 result = r.json()
@@ -197,8 +198,12 @@ class SGCCData:
         try:
             for i in range(2):
                 year = cur_year - i
-                params = f"consNo={consNo}&currentYear={year}&isFlag=1"
-                r = requests.post(BILLINFO_URL, headers=headers, data=params, timeout=10)
+                params = {
+                    "consNo": consNo,
+                    "currentYear": year,
+                    "isFlag": 1
+                }
+                r = requests.post(BILLINFO_URL, data=params, headers=headers, timeout=10)
                 if r.status_code == 200:
                     _LOGGER.debug(f"getBillByYear {params} response: {r.text}")
                     result = r.json()
@@ -226,7 +231,35 @@ class SGCCData:
                         _LOGGER.error(f"getBillByYear error: {result['msg']}")
                 else:
                     _LOGGER.error(f"getBillByYear response status_code = {r.status_code}, params = {params}")
-        except:
+        except Exception as e:
+            pass
+
+    def getDailyBills(self, consNo):
+        headers = self.commonHeaders()
+        params = {
+            "consNo": consNo,
+            "days": 30
+        }
+        try:
+            r = requests.post(DAILYBILL_URL, data=params, headers=headers, timeout=10)
+            if r.status_code == 200:
+                _LOGGER.debug(f"getBillByDays {params} response: {r.text}")
+                result = r.json()
+                if result["status"] == 0:
+                    dayBills = len(result["data"])
+                    self._info[consNo]["daily_bills"] = []
+                    for count in range(dayBills):
+                        daily_bills = result["data"][dayBills - count - 1]
+                        self._info[consNo]["daily_bills"].append({
+                            "bill_date": daily_bills.get("DATA_DATE"),
+                            "bill_time": daily_bills.get("COL_TIME"),
+                            "day_consume": daily_bills.get("PAP_R"),
+                            "day_consume1": daily_bills.get("PAP_R1"),
+                            "day_consume2": daily_bills.get("PAP_R2"),
+                            "day_consume3": daily_bills.get("PAP_R3"),
+                            "day_consume4": daily_bills.get("PAP_R4"),
+                        })
+        except Exception as e:
             pass
 
     def getData(self):
@@ -235,5 +268,6 @@ class SGCCData:
                 self.getBalance(consNo)
                 self.getDetail(consNo)
                 self.getBillByYear(consNo)
+                self.getDailyBills(consNo)
             _LOGGER.debug(f"Data {self._info}")
         return self._info

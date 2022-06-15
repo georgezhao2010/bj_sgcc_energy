@@ -59,10 +59,26 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
                 sensors.append(SGCCSensor(coordinator, cons_no, key))
         for month in range(12):
             sensors.append(SGCCHistorySensor(coordinator, cons_no, month))
+        for day in range(30):
+            sensors.append(SGCCDailyBillSensor(coordinator, cons_no, day))
     async_add_devices(sensors, True)
 
 
-class SGCCSensor(CoordinatorEntity):
+class SGCCBaseSensor(CoordinatorEntity):
+    def __init__(self, coordinator):
+        super().__init__(coordinator)
+        self._unique_id = None
+
+    @property
+    def unique_id(self):
+        return self._unique_id
+
+    @property
+    def should_poll(self):
+        return False
+
+
+class SGCCSensor(SGCCBaseSensor):
     def __init__(self, coordinator, cons_no, sensor_key):
         super().__init__(coordinator)
         self._cons_no = cons_no
@@ -80,14 +96,6 @@ class SGCCSensor(CoordinatorEntity):
             return self._coordinator.data.get(self._cons_no).get(attribute)
         except KeyError:
             return STATE_UNKNOWN
-
-    @property
-    def unique_id(self):
-        return self._unique_id
-
-    @property
-    def should_poll(self):
-        return False
 
     @property
     def name(self):
@@ -121,7 +129,7 @@ class SGCCSensor(CoordinatorEntity):
         return attributes
 
 
-class SGCCHistorySensor(CoordinatorEntity):
+class SGCCHistorySensor(SGCCBaseSensor):
     def __init__(self, coordinator, cons_no, index):
         super().__init__(coordinator)
         self._cons_no = cons_no
@@ -129,14 +137,6 @@ class SGCCHistorySensor(CoordinatorEntity):
         self._index = index
         self._unique_id = f"{DOMAIN}.{cons_no}_history_{index + 1}"
         self.entity_id = self._unique_id
-
-    @property
-    def unique_id(self):
-        return self._unique_id
-
-    @property
-    def should_poll(self):
-        return False
 
     @property
     def name(self):
@@ -160,6 +160,57 @@ class SGCCHistorySensor(CoordinatorEntity):
             }
         except KeyError:
             return {"consume_bill": 0.0}
+
+    @property
+    def device_class(self):
+        return DEVICE_CLASS_ENERGY
+
+    @property
+    def unit_of_measurement(self):
+        return ENERGY_KILO_WATT_HOUR
+
+
+class SGCCDailyBillSensor(SGCCBaseSensor):
+    def __init__(self, coordinator, cons_no, index):
+        super().__init__(coordinator)
+        self._cons_no = cons_no
+        self._coordinator = coordinator
+        self._index = index
+        self._unique_id = f"{DOMAIN}.{cons_no}_daily_{index + 1}"
+        self.entity_id = self._unique_id
+
+    @property
+    def name(self):
+        try:
+            return self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get("bill_date")
+        except KeyError:
+            return STATE_UNKNOWN
+
+    @property
+    def state(self):
+        try:
+            return self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get("day_consume")
+        except KeyError:
+            return STATE_UNKNOWN
+
+    @property
+    def extra_state_attributes(self):
+        try:
+            return {
+                "bill_time": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
+                    "bill_time"),
+                "day_consume1": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
+                    "day_consume1"),
+                "day_consume2": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
+                    "day_consume2"),
+                "day_consume3": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
+                    "day_consume3"),
+                "day_consume4": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
+                    "day_consume4"),
+
+            }
+        except KeyError:
+            return None
 
     @property
     def device_class(self):
