@@ -42,6 +42,7 @@ bj_sgcc_energy:
 | sensor.XXXXXXXXXX_year_consume | 本年度用电量 |
 | sensor.XXXXXXXXXX_year_consume_bill | 本年度电费 |
 | sensor.XXXXXXXXXX_history_* | 过去12个月用电 | name - 月份<br/>consume_bill - 该月电费| \*取值为1-12<br/> |
+| sensor.XXXXXXXXXX_daily_* | 过去30天用电 | name - 日期<br/>bill_time - 采集时间<br/>day_consume1 - 平时用电<br/>day_consume2 - 尖时用电?<br/>day_consume3 - 峰时用电?<br/>day_consume4 - 谷时用电?| \*取值为1-30|
 
 其中XXXXXXXXXX为北京国电用户户号
 
@@ -63,7 +64,7 @@ cards:
   - type: custom:flex-table-card
     title: 过去12个月用电情况
     entities:
-      include: sensor.XXXXXXXXXX_history*
+      include: sensor.XXXXXXXXXX_history_*
     columns:
       - name: 月份
         data: name
@@ -71,6 +72,23 @@ cards:
         data: state
       - name: 电费
         data: consume_bill
+  - type: custom:flex-table-card
+    title: 过去30天用电情况
+    entities:
+      include: sensor.XXXXXXXXXX_daily_*
+    columns:
+      - name: 日期
+        data: name
+      - name: 用电量
+        data: state
+      - name: 尖时用电
+        data: day_consume2
+      - name: 峰时用电
+        data: day_consume3
+      - name: 平时用电
+        data: day_consume1
+      - name: 谷时用电
+        data: day_consume4
 ```
 ![screenshot](https://user-images.githubusercontent.com/27534713/129530748-0f3d980b-357f-4538-b4b4-4f4f65e3df48.png)
 
