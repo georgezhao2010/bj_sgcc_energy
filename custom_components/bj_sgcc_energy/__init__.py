@@ -3,6 +3,7 @@ import asyncio
 import async_timeout
 from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers import discovery
 from homeassistant.core import HomeAssistant
 from .sgcc import SGCCData
@@ -36,16 +37,15 @@ class GJDWCorrdinator(DataUpdateCoordinator):
             update_interval=UPDATE_INTERVAL
         )
         self._hass = hass
-        self._sgcc = SGCCData(openid)
+        session = async_create_clientsession(hass)
+        self._sgcc = SGCCData(session, openid)
 
     async def _async_update_data(self):
         _LOGGER.debug("Data updating...")
         data = self.data
         try:
             async with async_timeout.timeout(60):
-                data = await self._hass.async_add_executor_job(
-                    self._sgcc.getData
-                )
+                data = await self._sgcc.async_get_data()
         except asyncio.TimeoutError:
             _LOGGER.warning("Data update timed out")
         return data

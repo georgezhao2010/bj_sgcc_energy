@@ -1,6 +1,6 @@
-import requests
 import logging
 import datetime
+import json
 from .const import PGC_PRICE
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,17 +33,22 @@ def get_pgv_type(bill_range):
 
 
 class SGCCData:
-    def __init__(self, openid):
+    def __init__(self, session, openid):
+        self._session = session
         self._openid = openid
-        self._session = "e7d569dc-0806-4b30-9379-169ccf33e92a"
+        self._session_code = "e7d569dc-0806-4b30-9379-169ccf33e92a"
         self._info = {}
 
-    def getToken(self):
+    @staticmethod
+    def tuple2list(tup: tuple):
+        return {bytes.decode(tup[i][0]): bytes.decode(tup[i][1]) for i, _ in enumerate(tup)}
+
+    async def async_get_token(self):
         headers = {
             "Host": "weixin.bj.sgcc.com.cn",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Upgrade-Insecure-Requests": "1",
-            "Cookie": f"SESSION={self._session}; user_openid={self._openid}",
+            "Cookie": f"SESSION={self._session_code}; user_openid={self._openid}",
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 "
                           "(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.7(0x1800072c) "
                           "NetType/WIFI Language/zh_CN",
@@ -53,19 +58,19 @@ class SGCCData:
         }
         ret = True
         try:
-            r = requests.get(AUTH_URL, headers=headers, allow_redirects=False, timeout=10)
-            if r.status_code == 200 or r.status_code == 302:
-                response_headers = r.headers
+            r = await self._session.get(AUTH_URL, headers=headers, allow_redirects=False, timeout=10)
+            if r.status == 200 or r.status == 302:
+                response_headers = self.tuple2list(r.raw_headers)
                 if "Set-Cookie" in response_headers:
                     set_cookie = response_headers["Set-Cookie"]
-                    self._session = set_cookie.split(";")[0].split("=")[1]
-                    _LOGGER.debug(f"Got new session {self._session}")
+                    self._session_code = set_cookie.split(";")[0].split("=")[1]
+                    _LOGGER.debug(f"Got a new session {self._session_code}")
             else:
                 ret = False
-                _LOGGER.error(f"getToken response status_code = {r.status_code}")
+                _LOGGER.error(f"async_get_token response status_code = {r.status}")
         except Exception as e:
             ret = False
-            _LOGGER.error(f"getToken response got error: {e}")
+            _LOGGER.error(f"async_get_token response got error: {e}")
         return ret
 
     def commonHeaders(self):
@@ -81,17 +86,17 @@ class SGCCData:
                           "(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.7(0x1800072c) "
                           "NetType/WIFI Language/zh_CN",
             "Connection": "keep-alive",
-            "Cookie": f"SESSION={self._session}; user_openid={self._openid}"
+            "Cookie": f"SESSION={self._session_code}; user_openid={self._openid}"
         }
         return headers
 
-    def getConsNo(self):
+    async def async_get_ConsNo(self):
         headers = self.commonHeaders()
         ret = True
         try:
-            r = requests.post(CONSNO_URL, headers=headers, timeout=10)
-            if r.status_code == 200:
-                result = r.json()
+            r = await self._session.post(CONSNO_URL, headers=headers, timeout=10)
+            if r.status == 200:
+                result = json.loads(await r.read())
                 if result["status"] == 0:
                     data = result["data"]
                     for single in data:
@@ -101,52 +106,50 @@ class SGCCData:
                             self._info[consNo] = {}
                 else:
                     ret = False
-                    _LOGGER.error(f"getConsNo error: {result['msg']}")
+                    _LOGGER.error(f"async_get_ConsNo error: {result['msg']}")
             else:
                 ret = False
-                _LOGGER.error(f"getConsNo response status_code = {r.status_code}")
+                _LOGGER.error(f"async_get_ConsNo response status_code = {r.status_code}")
 
         except Exception as e:
-            _LOGGER.error(f"getConsNo response got error: {e}")
+            _LOGGER.error(f"async_get_ConsNo response got error: {e}")
             ret = False
         return ret
 
-    def getBalance(self, consNo):
+    async def get_balance(self, consNo):
         headers = self.commonHeaders()
         data = {
             "consNo": consNo
         }
         ret = True
         try:
-            r = requests.post(REMAIN_URL, data=data, headers=headers, timeout=10)
-            if r.status_code == 200:
-                _LOGGER.debug(f"getBalance response: {r.text}")
-                result = r.json()
+            r = await self._session.post(REMAIN_URL, data=data, headers=headers, timeout=10)
+            if r.status == 200:
+                result = json.loads(await r.read())
                 if result["status"] == 0:
                     self._info[consNo]["balance"] = result["data"]["BALANCE_SHEET"]
                     self._info[consNo]["last_update"] = result["data"]["AS_TIME"]
                 else:
                     ret = False
-                    _LOGGER.error(f"getBalance error:{result['msg']}")
+                    _LOGGER.error(f"get_balance error:{result['msg']}")
             else:
                 ret = False
-                _LOGGER.error(f"getBalance response status_code = {r.status_code}")
+                _LOGGER.error(f"get_balance response status_code = {r.status_code}")
         except Exception as e:
             ret = False
-            _LOGGER.error(f"getBalance response got error: {e}")
+            _LOGGER.error(f"get_balance response got error: {e}")
         return ret
 
-    def getDetail(self, consNo):
+    async def get_detail(self, consNo):
         headers = self.commonHeaders()
-        params = {
+        data = {
             "consNo": consNo
         }
         ret = True
         try:
-            r = requests.get(DETAIL_URL, data=params, headers=headers, timeout=10)
-            if r.status_code == 200:
-                _LOGGER.debug(f"getDetail response: {r.text}")
-                result = r.json()
+            r = await self._session.post(DETAIL_URL, data=data, headers=headers, timeout=10)
+            if r.status == 200:
+                result = json.loads(await r.read())
                 if result["status"] == 0:
                     data = result["data"]
                     bill_size = len(data["billDetails"])
@@ -182,31 +185,30 @@ class SGCCData:
                     self._info[consNo]["year"] = int(data["currentYear"])
                 else:
                     ret = False
-                    _LOGGER.error(f"getDetail error: {result['msg']}")
+                    _LOGGER.error(f"get_detail error: {result['msg']}")
             else:
                 ret = False
-                _LOGGER.error(f"getDetail response status_code = {r.status_code}")
+                _LOGGER.error(f"get_detail response status_code = {r.status_code}")
         except Exception as e:
             ret = False
-            _LOGGER.error(f"getDetail response got error: {e}")
+            _LOGGER.error(f"get_detail response got error: {e}")
         return ret
 
-    def getBillByYear(self, consNo):
+    async def get_monthly_bill(self, consNo):
         headers = self.commonHeaders()
         cur_year = self._info[consNo]["year"]
         period = 12
         try:
             for i in range(2):
                 year = cur_year - i
-                params = {
+                data = {
                     "consNo": consNo,
                     "currentYear": year,
                     "isFlag": 1
                 }
-                r = requests.post(BILLINFO_URL, data=params, headers=headers, timeout=10)
-                if r.status_code == 200:
-                    _LOGGER.debug(f"getBillByYear {params} response: {r.text}")
-                    result = r.json()
+                r = await self._session.post(BILLINFO_URL, data=data, headers=headers, timeout=10)
+                if r.status == 200:
+                    result = json.loads(await r.read())
                     if result["status"] == 0:
                         monthBills = result["data"]["monthBills"]
                         if period == 12:
@@ -228,23 +230,22 @@ class SGCCData:
                                 self._info[consNo]["history"][11 - i]["consume"] = monthBills[period + i]["SUM_ELEC"]
                                 self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
                     else:
-                        _LOGGER.error(f"getBillByYear error: {result['msg']}")
+                        _LOGGER.error(f"get_monthly_bill error: {result['msg']}")
                 else:
-                    _LOGGER.error(f"getBillByYear response status_code = {r.status_code}, params = {params}")
+                    _LOGGER.error(f"get_monthly_bill response status_code = {r.status_code}, params = {params}")
         except Exception as e:
             pass
 
-    def getDailyBills(self, consNo):
+    async def get_daily_bills(self, consNo):
         headers = self.commonHeaders()
-        params = {
+        data = {
             "consNo": consNo,
             "days": 30
         }
         try:
-            r = requests.post(DAILYBILL_URL, data=params, headers=headers, timeout=10)
-            if r.status_code == 200:
-                _LOGGER.debug(f"getBillByDays {params} response: {r.text}")
-                result = r.json()
+            r = await self._session.post(DAILYBILL_URL, data=data, headers=headers, timeout=10)
+            if r.status == 200:
+                result = json.loads(await r.read())
                 if result["status"] == 0:
                     dayBills = len(result["data"])
                     self._info[consNo]["daily_bills"] = []
@@ -262,12 +263,12 @@ class SGCCData:
         except Exception as e:
             pass
 
-    def getData(self):
-        if self.getToken() and self.getConsNo():
+    async def async_get_data(self):
+        if await self.async_get_token() and await self.async_get_ConsNo():
             for consNo in self._info.keys():
-                self.getBalance(consNo)
-                self.getDetail(consNo)
-                self.getBillByYear(consNo)
-                self.getDailyBills(consNo)
+                await self.get_balance(consNo)
+                await self.get_detail(consNo)
+                await self.get_monthly_bill(consNo)
+                await self.get_daily_bills(consNo)
             _LOGGER.debug(f"Data {self._info}")
         return self._info
