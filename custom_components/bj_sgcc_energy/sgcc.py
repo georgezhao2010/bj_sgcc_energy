@@ -57,20 +57,16 @@ class SGCCData:
             "Connection": "keep-alive",
         }
         ret = True
-        try:
-            r = await self._session.get(AUTH_URL, headers=headers, allow_redirects=False, timeout=10)
-            if r.status == 200 or r.status == 302:
-                response_headers = self.tuple2list(r.raw_headers)
-                if "Set-Cookie" in response_headers:
-                    set_cookie = response_headers["Set-Cookie"]
-                    self._session_code = set_cookie.split(";")[0].split("=")[1]
-                    _LOGGER.debug(f"Got a new session {self._session_code}")
-            else:
-                ret = False
-                _LOGGER.error(f"async_get_token response status_code = {r.status}")
-        except Exception as e:
+        r = await self._session.get(AUTH_URL, headers=headers, allow_redirects=False, timeout=10)
+        if r.status == 200 or r.status == 302:
+            response_headers = self.tuple2list(r.raw_headers)
+            if "Set-Cookie" in response_headers:
+                set_cookie = response_headers["Set-Cookie"]
+                self._session_code = set_cookie.split(";")[0].split("=")[1]
+                _LOGGER.debug(f"Got a new session {self._session_code}")
+        else:
             ret = False
-            _LOGGER.error(f"async_get_token response got error: {e}")
+            _LOGGER.error(f"async_get_token response status_code = {r.status}")
         return ret
 
     def commonHeaders(self):
@@ -93,27 +89,22 @@ class SGCCData:
     async def async_get_ConsNo(self):
         headers = self.commonHeaders()
         ret = True
-        try:
-            r = await self._session.post(CONSNO_URL, headers=headers, timeout=10)
-            if r.status == 200:
-                result = json.loads(await r.read())
-                if result["status"] == 0:
-                    data = result["data"]
-                    for single in data:
-                        consNo = single["consNo"]
-                        if consNo not in self._info:
-                            _LOGGER.debug(f"Got ConsNo {consNo}")
-                            self._info[consNo] = {}
-                else:
-                    ret = False
-                    _LOGGER.error(f"async_get_ConsNo error: {result['msg']}")
+        r = await self._session.get(CONSNO_URL, headers=headers, timeout=10)
+        if r.status == 200:
+            result = json.loads(await r.read())
+            if result["status"] == 0:
+                data = result["data"]
+                for single in data:
+                    consNo = single["consNo"]
+                    if consNo not in self._info:
+                        _LOGGER.debug(f"Got ConsNo {consNo}")
+                        self._info[consNo] = {}
             else:
                 ret = False
-                _LOGGER.error(f"async_get_ConsNo response status_code = {r.status_code}")
-
-        except Exception as e:
-            _LOGGER.error(f"async_get_ConsNo response got error: {e}")
+                _LOGGER.error(f"async_get_ConsNo error: {result['msg']}")
+        else:
             ret = False
+            _LOGGER.error(f"async_get_ConsNo response status_code = {r.status_code}")
         return ret
 
     async def get_balance(self, consNo):
@@ -122,22 +113,18 @@ class SGCCData:
             "consNo": consNo
         }
         ret = True
-        try:
-            r = await self._session.post(REMAIN_URL, data=data, headers=headers, timeout=10)
-            if r.status == 200:
-                result = json.loads(await r.read())
-                if result["status"] == 0:
-                    self._info[consNo]["balance"] = result["data"]["BALANCE_SHEET"]
-                    self._info[consNo]["last_update"] = result["data"]["AS_TIME"]
-                else:
-                    ret = False
-                    _LOGGER.error(f"get_balance error:{result['msg']}")
+        r = await self._session.post(REMAIN_URL, data=data, headers=headers, timeout=10)
+        if r.status == 200:
+            result = json.loads(await r.read())
+            if result["status"] == 0:
+                self._info[consNo]["balance"] = result["data"]["BALANCE_SHEET"]
+                self._info[consNo]["last_update"] = result["data"]["AS_TIME"]
             else:
                 ret = False
-                _LOGGER.error(f"get_balance response status_code = {r.status_code}")
-        except Exception as e:
+                _LOGGER.error(f"get_balance error:{result['msg']}")
+        else:
             ret = False
-            _LOGGER.error(f"get_balance response got error: {e}")
+            _LOGGER.error(f"get_balance response status_code = {r.status_code}")
         return ret
 
     async def get_detail(self, consNo):
@@ -146,95 +133,94 @@ class SGCCData:
             "consNo": consNo
         }
         ret = True
-        try:
-            r = await self._session.post(DETAIL_URL, data=data, headers=headers, timeout=10)
-            if r.status == 200:
-                result = json.loads(await r.read())
-                if result["status"] == 0:
-                    data = result["data"]
-                    bill_size = len(data["billDetails"])
-                    if data["isFlag"] == "1":  # 阶梯用户是否这么判断？ 瞎蒙的
-                        self._info[consNo]["current_level"] = 3
-                        for n in range(0, len(LEVEL_REMAIN)):
-                            if int(data[LEVEL_REMAIN[n]]) > 0:
-                                self._info[consNo]["current_level"] = n + 1
-                                break
-                        for n in range(0, bill_size):
-                            if int(data["billDetails"][n]["LEVEL_NUM"]) == self._info[consNo]["current_level"]:
-                                self._info[consNo]["current_price"] = data["billDetails"][n]["KWH_PRC"]
-                                break
-                        key = LEVEL_CONSUME[self._info[consNo]["current_level"] - 1]
-                        self._info[consNo]["current_level_consume"] = int(data[key])
-                        if self._info[consNo]["current_level"] < 3:
-                            key = LEVEL_REMAIN[self._info[consNo]["current_level"] - 1]
-                            self._info[consNo]["current_level_remain"] = int(data[key])
-                        else:
-                            self._info[consNo]["current_level_remain"] = "∞"
+        r = await self._session.post(DETAIL_URL, data=data, headers=headers, timeout=10)
+        if r.status == 200:
+            result = json.loads(await r.read())
+            if result["status"] == 0:
+                data = result["data"]
+                bill_size = len(data["billDetails"])
+                if data["isFlag"] == "1":  # 阶梯用户是否这么判断？ 瞎蒙的
+                    self._info[consNo]["current_level"] = 3
+                    for n in range(0, len(LEVEL_REMAIN)):
+                        if int(data[LEVEL_REMAIN[n]]) > 0:
+                            self._info[consNo]["current_level"] = n + 1
+                            break
+                    for n in range(0, bill_size):
+                        if int(data["billDetails"][n]["LEVEL_NUM"]) == self._info[consNo]["current_level"]:
+                            self._info[consNo]["current_price"] = data["billDetails"][n]["KWH_PRC"]
+                            break
+                    key = LEVEL_CONSUME[self._info[consNo]["current_level"] - 1]
+                    self._info[consNo]["current_level_consume"] = int(data[key])
+                    if self._info[consNo]["current_level"] < 3:
+                        key = LEVEL_REMAIN[self._info[consNo]["current_level"] - 1]
+                        self._info[consNo]["current_level_remain"] = int(data[key])
                     else:
-                        bill_range = []
-                        for n in range(0, bill_size):
-                            bill_range.append(data["billDetails"][n]["PRC_TS_NAME"])
-                        pgv_type = get_pgv_type(bill_range)
-                        for n in range(0, bill_size):
-                            if data["billDetails"][n]["PRC_TS_NAME"] == pgv_type:
-                                self._info[consNo]["current_price"] = data["billDetails"][n]["KWH_PRC"]
-                                self._info[consNo]["current_pgv_type"] = data["billDetails"][n]["PRC_TS_NAME"]
-                                break
-                    self._info[consNo]["year_consume"] = data["TOTAL_ELEC"]
-                    self._info[consNo]["year_consume_bill"] = data["TOTAL_ELECBILL"]
-                    self._info[consNo]["year"] = int(data["currentYear"])
+                        self._info[consNo]["current_level_remain"] = "∞"
                 else:
-                    ret = False
-                    _LOGGER.error(f"get_detail error: {result['msg']}")
+                    bill_range = []
+                    for n in range(0, bill_size):
+                        bill_range.append(data["billDetails"][n]["PRC_TS_NAME"])
+                    pgv_type = get_pgv_type(bill_range)
+                    for n in range(0, bill_size):
+                        if data["billDetails"][n]["PRC_TS_NAME"] == pgv_type:
+                            self._info[consNo]["current_price"] = data["billDetails"][n]["KWH_PRC"]
+                            self._info[consNo]["current_pgv_type"] = data["billDetails"][n]["PRC_TS_NAME"]
+                            break
+                self._info[consNo]["year_consume"] = data["TOTAL_ELEC"]
+                self._info[consNo]["year_consume_bill"] = data["TOTAL_ELECBILL"]
+                self._info[consNo]["year"] = int(data["currentYear"])
             else:
                 ret = False
-                _LOGGER.error(f"get_detail response status_code = {r.status_code}")
-        except Exception as e:
+                _LOGGER.error(f"get_detail error: {result['msg']}")
+        else:
             ret = False
-            _LOGGER.error(f"get_detail response got error: {e}")
+            _LOGGER.error(f"get_detail response status_code = {r.status_code}")
         return ret
 
     async def get_monthly_bill(self, consNo):
         headers = self.commonHeaders()
         cur_year = self._info[consNo]["year"]
         period = 12
-        try:
-            for i in range(2):
-                year = cur_year - i
-                data = {
-                    "consNo": consNo,
-                    "currentYear": year,
-                    "isFlag": 1
-                }
-                r = await self._session.post(BILLINFO_URL, data=data, headers=headers, timeout=10)
-                if r.status == 200:
-                    result = json.loads(await r.read())
-                    if result["status"] == 0:
-                        monthBills = result["data"]["monthBills"]
-                        if period == 12:
-                            for month in range(12):
-                                if monthBills[month]["SUM_ELEC"] == "--":
-                                    period = month
-                                    break
-                        if i == 0:
-                            self._info[consNo]["history"] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-                            for i in range(period):
-                                self._info[consNo]["history"][i] = {}
-                                self._info[consNo]["history"][i]["name"] = monthBills[period - i - 1]["AMT_YM"]
-                                self._info[consNo]["history"][i]["consume"] = monthBills[period - i - 1]["SUM_ELEC"]
-                                self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1]["SUM_ELECBILL"]
-                        else:
-                            for i in range(12 - period):
-                                self._info[consNo]["history"][11 - i] = {}
-                                self._info[consNo]["history"][11 - i]["name"] = monthBills[period + i]["AMT_YM"]
-                                self._info[consNo]["history"][11 - i]["consume"] = monthBills[period + i]["SUM_ELEC"]
-                                self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
+        ret = True
+        for i in range(2):
+            year = cur_year - i
+            data = {
+                "consNo": consNo,
+                "currentYear": year,
+                "isFlag": 1
+            }
+            r = await self._session.post(BILLINFO_URL, data=data, headers=headers, timeout=10)
+            if r.status == 200:
+                result = json.loads(await r.read())
+                if result["status"] == 0:
+                    monthBills = result["data"]["monthBills"]
+                    if period == 12:
+                        for month in range(12):
+                            if monthBills[month]["SUM_ELEC"] == "--":
+                                period = month
+                                break
+                    if i == 0:
+                        self._info[consNo]["history"] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                        for i in range(period):
+                            self._info[consNo]["history"][i] = {}
+                            self._info[consNo]["history"][i]["name"] = monthBills[period - i - 1]["AMT_YM"]
+                            self._info[consNo]["history"][i]["consume"] = monthBills[period - i - 1]["SUM_ELEC"]
+                            self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1]["SUM_ELECBILL"]
                     else:
-                        _LOGGER.error(f"get_monthly_bill error: {result['msg']}")
+                        for i in range(12 - period):
+                            self._info[consNo]["history"][11 - i] = {}
+                            self._info[consNo]["history"][11 - i]["name"] = monthBills[period + i]["AMT_YM"]
+                            self._info[consNo]["history"][11 - i]["consume"] = monthBills[period + i]["SUM_ELEC"]
+                            self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
                 else:
-                    _LOGGER.error(f"get_monthly_bill response status_code = {r.status_code}, params = {params}")
-        except Exception as e:
-            pass
+                    _LOGGER.error(f"get_monthly_bill error: {result['msg']}")
+                    ret = False
+                    break
+            else:
+                _LOGGER.error(f"get_monthly_bill response status_code = {r.status_code}, params = {data}")
+                ret = False
+                break
+        return ret
 
     async def get_daily_bills(self, consNo):
         headers = self.commonHeaders()
@@ -242,33 +228,41 @@ class SGCCData:
             "consNo": consNo,
             "days": 30
         }
-        try:
-            r = await self._session.post(DAILYBILL_URL, data=data, headers=headers, timeout=10)
-            if r.status == 200:
-                result = json.loads(await r.read())
-                if result["status"] == 0:
-                    dayBills = len(result["data"])
-                    self._info[consNo]["daily_bills"] = []
-                    for count in range(dayBills):
-                        daily_bills = result["data"][dayBills - count - 1]
-                        self._info[consNo]["daily_bills"].append({
-                            "bill_date": daily_bills.get("DATA_DATE"),
-                            "bill_time": daily_bills.get("COL_TIME"),
-                            "day_consume": daily_bills.get("PAP_R"),
-                            "day_consume1": daily_bills.get("PAP_R1"),
-                            "day_consume2": daily_bills.get("PAP_R2"),
-                            "day_consume3": daily_bills.get("PAP_R3"),
-                            "day_consume4": daily_bills.get("PAP_R4"),
-                        })
-        except Exception as e:
-            pass
+        ret = True
+        r = await self._session.post(DAILYBILL_URL, data=data, headers=headers, timeout=10)
+        if r.status == 200:
+            result = json.loads(await r.read())
+            if result["status"] == 0:
+                dayBills = len(result["data"])
+                self._info[consNo]["daily_bills"] = []
+                for count in range(dayBills):
+                    daily_bills = result["data"][dayBills - count - 1]
+                    self._info[consNo]["daily_bills"].append({
+                        "bill_date": daily_bills.get("DATA_DATE"),
+                        "bill_time": daily_bills.get("COL_TIME"),
+                        "day_consume": daily_bills.get("PAP_R"),
+                        "day_consume1": daily_bills.get("PAP_R1"),
+                        "day_consume2": daily_bills.get("PAP_R2"),
+                        "day_consume3": daily_bills.get("PAP_R3"),
+                        "day_consume4": daily_bills.get("PAP_R4"),
+                    })
+        else:
+            ret = False
+        return ret
 
     async def async_get_data(self):
-        if await self.async_get_token() and await self.async_get_ConsNo():
-            for consNo in self._info.keys():
-                await self.get_balance(consNo)
-                await self.get_detail(consNo)
-                await self.get_monthly_bill(consNo)
-                await self.get_daily_bills(consNo)
-            _LOGGER.debug(f"Data {self._info}")
-        return self._info
+        self._info = {}
+        try:
+            result = False
+            if await self.async_get_token() and await self.async_get_ConsNo():
+                for consNo in self._info.keys():
+                    result = await self.get_balance(consNo) and \
+                             await self.get_detail(consNo) and \
+                             await self.get_monthly_bill(consNo) and \
+                             await self.get_daily_bills(consNo)
+                _LOGGER.debug(f"Data {self._info}")
+            if result:
+                return self._info
+        except Exception:
+            pass
+        return None
