@@ -1,19 +1,29 @@
 import logging
 import datetime
 import json
+import asyncio
+
 from .const import PGC_PRICE
 
 _LOGGER = logging.getLogger(__name__)
 
-AUTH_URL = "http://weixin.bj.sgcc.com.cn/ott/app/auth/authorize?target=M_YECX"
-CONSNO_URL = "http://weixin.bj.sgcc.com.cn/ott/app/follower/consumer/prepaid/list"
-REMAIN_URL = "http://weixin.bj.sgcc.com.cn/ott/app/elec/account/query"
-DETAIL_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/overview"
+AUTH_URL = "http://weixin.bj.sgcc.com.cn/ott/app/auth/authorize?target=M_WYYT"
+CONSNO_URL = "http://weixin.bj.sgcc.com.cn/ott/app/follower/bound/cons"
+REMAIN_URL = "http://weixin.bj.sgcc.com.cn/ott/app/home/getElectricBill?consNo="
+DETAIL_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/overview?consNo="
 BILLINFO_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/queryElecBillInfoEveryYear"
 DAILYBILL_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/daily"
 
 LEVEL_CONSUME = ["levelOneSum", "levelTwoSum", "levelThreeSum"]
 LEVEL_REMAIN = ["levelOneRemain", "levelTwoRemain"]
+
+
+class AuthFailed(Exception):
+    pass
+
+
+class InvalidData(Exception):
+    pass
 
 
 def get_pgv_type(bill_range):
@@ -36,7 +46,6 @@ class SGCCData:
     def __init__(self, session, openid):
         self._session = session
         self._openid = openid
-        self._session_code = "e7d569dc-0806-4b30-9379-169ccf33e92a"
         self._info = {}
 
     @staticmethod
@@ -48,7 +57,7 @@ class SGCCData:
             "Host": "weixin.bj.sgcc.com.cn",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Upgrade-Insecure-Requests": "1",
-            "Cookie": f"SESSION={self._session_code}; user_openid={self._openid}",
+            "Cookie": f"user_openid={self._openid}",
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 "
                           "(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.7(0x1800072c) "
                           "NetType/WIFI Language/zh_CN",
@@ -56,25 +65,22 @@ class SGCCData:
             "Accept-Encoding": "gzip, deflate",
             "Connection": "keep-alive",
         }
-        ret = True
         r = await self._session.get(AUTH_URL, headers=headers, allow_redirects=False, timeout=10)
         if r.status == 200 or r.status == 302:
             response_headers = self.tuple2list(r.raw_headers)
-            if "Set-Cookie" in response_headers:
-                set_cookie = response_headers["Set-Cookie"]
-                self._session_code = set_cookie.split(";")[0].split("=")[1]
-                _LOGGER.debug(f"Got a new session {self._session_code}")
+            location = response_headers.get("Location") #这个OpenID有问题
+            if location and str.find(location, "connect_redirect") > 0:
+                raise AuthFailed("Invalid open-id")
         else:
-            ret = False
             _LOGGER.error(f"async_get_token response status_code = {r.status}")
-        return ret
+            raise AuthFailed(f"Authentication unexpected response code {r.status}")
 
     def commonHeaders(self):
         headers = {
             "Host": "weixin.bj.sgcc.com.cn",
             "Accept": "*/*",
             "X-Requested-With": "XMLHttpRequest",
-            "Accept-Language": "zh-cn",
+            "Accept-Language": "zh-cn, zh-Hans; q=0.9",
             "Accept-Encoding": "gzip, deflate",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             "Origin": "http://weixin.bj.sgcc.com.cn",
@@ -82,14 +88,13 @@ class SGCCData:
                           "(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.7(0x1800072c) "
                           "NetType/WIFI Language/zh_CN",
             "Connection": "keep-alive",
-            "Cookie": f"SESSION={self._session_code}; user_openid={self._openid}"
+            "Cookie": f"user_openid={self._openid}"
         }
         return headers
 
     async def async_get_ConsNo(self):
         headers = self.commonHeaders()
-        ret = True
-        r = await self._session.get(CONSNO_URL, headers=headers, timeout=10)
+        r = await self._session.post(CONSNO_URL, headers=headers, timeout=10)
         if r.status == 200:
             result = json.loads(await r.read())
             if result["status"] == 0:
@@ -97,48 +102,35 @@ class SGCCData:
                 for single in data:
                     consNo = single["consNo"]
                     if consNo not in self._info:
-                        _LOGGER.debug(f"Got ConsNo {consNo}")
                         self._info[consNo] = {}
             else:
-                ret = False
-                _LOGGER.error(f"async_get_ConsNo error: {result['msg']}")
+                raise InvalidData(f"async_get_ConsNo error: {result['msg']}")
         else:
-            ret = False
-            _LOGGER.error(f"async_get_ConsNo response status_code = {r.status_code}")
-        return ret
+            raise InvalidData(f"async_get_ConsNo response status_code = {r.status_code}")
 
-    async def get_balance(self, consNo):
+    async def aysnc_get_balance(self, consNo):
         headers = self.commonHeaders()
-        data = {
-            "consNo": consNo
-        }
-        ret = True
-        r = await self._session.post(REMAIN_URL, data=data, headers=headers, timeout=10)
+        r = await self._session.get(REMAIN_URL + consNo, headers=headers, timeout=10)
         if r.status == 200:
             result = json.loads(await r.read())
             if result["status"] == 0:
-                self._info[consNo]["balance"] = result["data"]["BALANCE_SHEET"]
-                self._info[consNo]["last_update"] = result["data"]["AS_TIME"]
+                self._info[consNo]["balance"] = result["data"]["balanceSheet"]
+                self._info[consNo]["last_update"] = result["data"]["asTime"]
             else:
-                ret = False
-                _LOGGER.error(f"get_balance error:{result['msg']}")
+                raise InvalidData(f"get_balance error:{result['msg']}")
         else:
-            ret = False
-            _LOGGER.error(f"get_balance response status_code = {r.status_code}")
-        return ret
+            raise InvalidData(f"get_balance response status_code = {r.status_code}")
 
-    async def get_detail(self, consNo):
+    async def async_get_detail(self, consNo):
         headers = self.commonHeaders()
-        data = {
-            "consNo": consNo
-        }
         ret = True
-        r = await self._session.post(DETAIL_URL, data=data, headers=headers, timeout=10)
+        r = await self._session.get(DETAIL_URL + consNo, headers=headers, timeout=10)
         if r.status == 200:
             result = json.loads(await r.read())
             if result["status"] == 0:
                 data = result["data"]
                 bill_size = len(data["billDetails"])
+                self._info[consNo]["isFlag"] = data["isFlag"]
                 if data["isFlag"] == "1":  # 阶梯用户是否这么判断？ 瞎蒙的
                     self._info[consNo]["current_level"] = 3
                     for n in range(0, len(LEVEL_REMAIN)):
@@ -168,7 +160,7 @@ class SGCCData:
                             break
                 self._info[consNo]["year_consume"] = data["TOTAL_ELEC"]
                 self._info[consNo]["year_consume_bill"] = data["TOTAL_ELECBILL"]
-                self._info[consNo]["year"] = int(data["currentYear"])
+                self._info[consNo]["year"] = int(data["CURRENT_YEAR"])
             else:
                 ret = False
                 _LOGGER.error(f"get_detail error: {result['msg']}")
@@ -187,7 +179,7 @@ class SGCCData:
             data = {
                 "consNo": consNo,
                 "currentYear": year,
-                "isFlag": 1
+                "isFlag": self._info[consNo]["isFlag"]
             }
             r = await self._session.post(BILLINFO_URL, data=data, headers=headers, timeout=10)
             if r.status == 200:
@@ -252,17 +244,17 @@ class SGCCData:
 
     async def async_get_data(self):
         self._info = {}
-        try:
-            result = False
-            if await self.async_get_token() and await self.async_get_ConsNo():
-                for consNo in self._info.keys():
-                    result = await self.get_balance(consNo) and \
-                             await self.get_detail(consNo) and \
-                             await self.get_monthly_bill(consNo) and \
-                             await self.get_daily_bills(consNo)
-                _LOGGER.debug(f"Data {self._info}")
-            if result:
-                return self._info
-        except Exception:
-            pass
-        return None
+
+        await self.async_get_token()
+        await self.async_get_ConsNo()
+        for consNo in self._info.keys():
+            await self.async_get_detail(consNo)
+            tasks = [
+                self.aysnc_get_balance(consNo),
+                self.get_monthly_bill(consNo),
+                self.get_daily_bills(consNo)
+            ]
+            await asyncio.wait(tasks)
+            _LOGGER.debug(f"Data {self._info}")
+        return self._info
+
