@@ -18,23 +18,20 @@ async def async_load_entities(hass, config, hass_config, coordinator):
     while True:
         try:
             await coordinator.async_auth()
+            await coordinator.async_refresh()
+            if coordinator.last_update_success:
+                _LOGGER.debug("Successful to update data, now loading entities")
+                hass.async_create_task(discovery.async_load_platform(
+                    hass, "sensor", DOMAIN, config, hass_config))
+                return
         except AuthFailed as e:
             _LOGGER.error(e)
             return
         except Exception:
-            await asyncio.sleep(20)
-            continue
-        coordinator.valid = True
-        try:
-            await coordinator.async_refresh()
-        except Exception:
-            await asyncio.sleep(30)
-            continue
-        if coordinator.last_update_success:
+            pass
+        _LOGGER.debug("Failed to load entities because data update timed out, retry after 30 seconds")
+        await asyncio.sleep(30)
 
-            hass.async_create_task(discovery.async_load_platform(
-                hass, "sensor", DOMAIN, config, hass_config))
-            return
 
 
 async def async_setup(hass: HomeAssistant, hass_config):
@@ -58,7 +55,6 @@ class GJDWCorrdinator(DataUpdateCoordinator):
             name=DOMAIN,
             update_interval=UPDATE_INTERVAL
         )
-        self.valid = False
         self._hass = hass
         session = async_create_clientsession(hass)
         self._sgcc = SGCCData(session, openid)
@@ -67,12 +63,13 @@ class GJDWCorrdinator(DataUpdateCoordinator):
         await self._sgcc.async_get_token()
 
     async def _async_update_data(self):
-        if self.valid:
-            try:
-                async with async_timeout.timeout(60):
-                    data = await self._sgcc.async_get_data()
-                    if not data:
-                        raise UpdateFailed("Failed to data update")
-                    return data
-            except asyncio.TimeoutError:
-                raise UpdateFailed("Data update timed out")
+        try:
+            async with async_timeout.timeout(60):
+                data = await self._sgcc.async_get_data()
+                if not data:
+                    raise UpdateFailed("Failed to data update")
+                return data
+        except asyncio.TimeoutError:
+            raise UpdateFailed("Data update timed out")
+        except Exception:
+            raise UpdateFailed("Failed to data update with unknown reason")
