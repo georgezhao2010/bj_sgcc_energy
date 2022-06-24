@@ -21,6 +21,8 @@ async def async_load_entities(hass, config, hass_config, coordinator):
         except AuthFailed as e:
             _LOGGER.error(e)
             return
+        except Exception:
+            pass
         coordinator.valid = True
         try:
             await coordinator.async_refresh()
