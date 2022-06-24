@@ -22,7 +22,8 @@ async def async_load_entities(hass, config, hass_config, coordinator):
             _LOGGER.error(e)
             return
         except Exception:
-            pass
+            await asyncio.sleep(20)
+            continue
         coordinator.valid = True
         try:
             await coordinator.async_refresh()
