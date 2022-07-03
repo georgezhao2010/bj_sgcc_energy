@@ -1,6 +1,8 @@
 import logging
 import asyncio
 import async_timeout
+import homeassistant.util.dt as dt_util
+from homeassistant.helpers.event import async_track_point_in_utc_time
 from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
@@ -14,8 +16,13 @@ _LOGGER = logging.getLogger(__name__)
 UPDATE_INTERVAL = timedelta(minutes=10)
 
 
-async def async_load_entities(hass, config, hass_config, coordinator):
-    while True:
+async def async_setup(hass: HomeAssistant, hass_config):
+    config = hass_config[DOMAIN]
+    openid = config.get("openid")
+    coordinator = GJDWCorrdinator(hass, openid)
+    hass.data[DOMAIN] = coordinator
+
+    async def async_load_entities(hass, config, hass_config, coordinator):
         try:
             await coordinator.async_auth()
             await coordinator.async_refresh()
@@ -29,21 +36,9 @@ async def async_load_entities(hass, config, hass_config, coordinator):
             return
         except Exception:
             pass
-        _LOGGER.debug("Failed to load entities because data update timed out, retry after 30 seconds")
-        await asyncio.sleep(30)
+        async_track_point_in_utc_time(hass, async_load_entities, dt_util.utcnow() + 30)
 
-
-
-async def async_setup(hass: HomeAssistant, hass_config):
-    config = hass_config[DOMAIN]
-    openid = config.get("openid")
-    if openid is not None:
-        coordinator = GJDWCorrdinator(hass, openid)
-        hass.data[DOMAIN] = coordinator
-        hass.async_create_task(async_load_entities(hass, config, hass_config, coordinator))
-    else:
-        _LOGGER.error("The required parameter openid is missing")
-        return False
+    async_track_point_in_utc_time(hass, async_load_entities, dt_util.utcnow())
     return True
 
 
