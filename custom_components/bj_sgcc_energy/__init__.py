@@ -22,7 +22,7 @@ async def async_setup(hass: HomeAssistant, hass_config):
     coordinator = GJDWCorrdinator(hass, openid)
     hass.data[DOMAIN] = coordinator
 
-    async def async_load_entities(hass, config, hass_config, coordinator):
+    async def async_load_entities(now):
         try:
             await coordinator.async_auth()
             await coordinator.async_refresh()
