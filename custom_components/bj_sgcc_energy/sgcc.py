@@ -193,17 +193,17 @@ class SGCCData:
                                 break
                     if i == 0:
                         self._info[consNo]["history"] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-                        for i in range(period):
-                            self._info[consNo]["history"][i] = {}
-                            self._info[consNo]["history"][i]["name"] = monthBills[period - i - 1]["AMT_YM"]
-                            self._info[consNo]["history"][i]["consume"] = monthBills[period - i - 1]["SUM_ELEC"]
-                            self._info[consNo]["history"][i]["consume_bill"] = monthBills[period - i - 1]["SUM_ELECBILL"]
+                        for n in range(period):
+                            self._info[consNo]["history"][n] = {}
+                            self._info[consNo]["history"][n]["name"] = monthBills[period - n - 1]["AMT_YM"]
+                            self._info[consNo]["history"][n]["consume"] = monthBills[period - n - 1]["SUM_ELEC"]
+                            self._info[consNo]["history"][n]["consume_bill"] = monthBills[period - n - 1]["SUM_ELECBILL"]
                     else:
-                        for i in range(12 - period):
-                            self._info[consNo]["history"][11 - i] = {}
-                            self._info[consNo]["history"][11 - i]["name"] = monthBills[period + i]["AMT_YM"]
-                            self._info[consNo]["history"][11 - i]["consume"] = monthBills[period + i]["SUM_ELEC"]
-                            self._info[consNo]["history"][11 - i]["consume_bill"] = monthBills[period + i]["SUM_ELECBILL"]
+                        for n in range(12 - period):
+                            self._info[consNo]["history"][11 - n] = {}
+                            self._info[consNo]["history"][11 - n]["name"] = monthBills[period + n]["AMT_YM"]
+                            self._info[consNo]["history"][11 - n]["consume"] = monthBills[period + n]["SUM_ELEC"]
+                            self._info[consNo]["history"][11 - n]["consume_bill"] = monthBills[period + n]["SUM_ELECBILL"]
                 else:
                     _LOGGER.error(f"get_monthly_bill error: {result['msg']}")
                     ret = False
