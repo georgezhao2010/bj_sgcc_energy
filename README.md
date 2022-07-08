@@ -1,6 +1,6 @@
 # 北京用电信息查询
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![Stable](https://img.shields.io/github/v/release/georgezhao2010/bj_sgcc_energy)](https://github.com/georgezhao2010/bj_sgcc_energy/releases/latest)
 
 通过“国网北京电力”微信公众号的接口，采集你的家庭用电信息。
