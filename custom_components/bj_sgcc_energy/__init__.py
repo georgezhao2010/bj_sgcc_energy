@@ -2,6 +2,7 @@ import logging
 import asyncio
 import async_timeout
 import homeassistant.util.dt as dt_util
+from datetime import timedelta
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -36,7 +37,7 @@ async def async_setup(hass: HomeAssistant, hass_config):
             return
         except Exception:
             pass
-        async_track_point_in_utc_time(hass, async_load_entities, dt_util.utcnow() + 30)
+        async_track_point_in_utc_time(hass, async_load_entities, dt_util.utcnow() + timedelta(seconds=30))
 
     async_track_point_in_utc_time(hass, async_load_entities, dt_util.utcnow())
     return True
