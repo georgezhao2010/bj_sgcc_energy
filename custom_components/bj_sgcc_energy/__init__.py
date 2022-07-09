@@ -36,6 +36,7 @@ async def async_setup(hass: HomeAssistant, hass_config):
             _LOGGER.error(e)
             return
         except Exception:
+            _LOGGER.error(f"Field to update data, re try after 30 seconds")
             pass
         async_track_point_in_utc_time(hass, async_load_entities, dt_util.utcnow() + timedelta(seconds=30))
 
