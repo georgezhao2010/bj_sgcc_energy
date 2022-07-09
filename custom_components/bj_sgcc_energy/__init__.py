@@ -2,7 +2,6 @@ import logging
 import asyncio
 import async_timeout
 import homeassistant.util.dt as dt_util
-from datetime import timedelta
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
