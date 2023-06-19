@@ -1,0 +1,19 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "设备已经配置好了"
+        },
+        "error": {
+            "cannot_connect": "连接失败",
+            "invalid_auth": "无效的身份验证",
+            "unknown": "意外的错误"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "openid": "OpenId"
+                }
+            }
+        }
+    }
+}

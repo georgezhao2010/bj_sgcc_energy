@@ -1,3 +1,5 @@
+"""Constants for the 北京用电信息查询 integration."""
+
 DOMAIN = "bj_sgcc_energy"
 
 PGC_PRICE = [
