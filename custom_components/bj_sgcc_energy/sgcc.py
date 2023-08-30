@@ -302,5 +302,5 @@ class SGCCData:
                 self.get_daily_bills(consNo)
             ]
             await asyncio.gather(*tasks)
-            LOGGER.debug(f"Data {self._info}")
+        LOGGER.debug(f"Data {self._info}")
         return self._info
