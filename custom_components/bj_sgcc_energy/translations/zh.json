@@ -1,19 +1,28 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "设备已经配置好了"
-        },
-        "error": {
-            "cannot_connect": "连接失败",
-            "invalid_auth": "无效的身份验证",
-            "unknown": "意外的错误"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "openid": "OpenId"
-                }
-            }
+  "config": {
+    "abort": {
+      "already_configured": "设备已经配置好了"
+    },
+    "error": {
+      "cannot_connect": "连接失败",
+      "invalid_auth": "无效的身份验证",
+      "unknown": "意外的错误"
+    },
+    "step": {
+      "user": {
+        "title": "添加 OpenId",
+        "description": "添加 OpenId",
+        "data": {
+          "openid": "OpenId"
         }
+      },
+      "account": {
+        "title": "选择用户号",
+        "description": "选择一个用户号",
+        "data": {
+          "consNo": "用户号"
+        }
+      }
     }
+  }
 }

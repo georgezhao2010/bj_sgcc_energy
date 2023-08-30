@@ -1,9 +1,14 @@
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.sensor import (
     SensorDeviceClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, STATE_UNKNOWN
-from .const import DOMAIN
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+
+from .const import DOMAIN, UPDATE_INTERVAL, LOGGER
+from .sgcc import GJDWCorrdinator
 
 SGCC_SENSORS = {
     "balance": {
@@ -42,19 +47,41 @@ SGCC_SENSORS = {
 }
 
 
-async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
+async def async_setup_entry(
+        hass: HomeAssistant,
+        config_entry: ConfigEntry,
+        async_add_entities: AddEntitiesCallback,
+):
     sensors = []
-    coordinator = hass.data[DOMAIN]
+    config = hass.data[DOMAIN][config_entry.entry_id]
+
+    openid = config.get("openid")
+    consNo = config.get("consNo")
+
+    api = GJDWCorrdinator(hass, openid, consNo)
+    hass.data[DOMAIN]["instance"] = api
+
+    coordinator = DataUpdateCoordinator(
+        hass,
+        LOGGER,
+        name=DOMAIN,
+        update_interval=UPDATE_INTERVAL,
+        update_method=api.async_update_data,
+    )
+    LOGGER.info("async_setup_entry: " + str(coordinator))
+    await coordinator.async_refresh()
     data = coordinator.data
+    sgcc_sensors_keys = SGCC_SENSORS.keys()
     for cons_no, values in data.items():
-        for key in SGCC_SENSORS.keys():
+        for key in sgcc_sensors_keys:
             if key in values.keys():
                 sensors.append(SGCCSensor(coordinator, cons_no, key))
+
         for month in range(12):
             sensors.append(SGCCHistorySensor(coordinator, cons_no, month))
         for day in range(30):
             sensors.append(SGCCDailyBillSensor(coordinator, cons_no, day))
-    async_add_devices(sensors, True)
+    async_add_entities(sensors, False)
     return None
 
 
@@ -62,8 +89,6 @@ class SGCCBaseSensor(CoordinatorEntity):
     def __init__(self, coordinator):
         super().__init__(coordinator)
         self._unique_id = None
-        return None
-
 
     @property
     def unique_id(self):
@@ -84,7 +109,6 @@ class SGCCSensor(SGCCBaseSensor):
         self._coordinator = coordinator
         self._unique_id = f"{DOMAIN}.{cons_no}_{sensor_key}"
         self.entity_id = self._unique_id
-        return None
 
     def get_value(self, attribute=None):
         try:
@@ -170,11 +194,11 @@ class SGCCHistorySensor(SGCCBaseSensor):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_ENERGY
+        return SensorDeviceClass.ENERGY
 
     @property
     def unit_of_measurement(self):
-        return ENERGY_KILO_WATT_HOUR
+        return UnitOfEnergy.KILO_WATT_HOUR
 
 
 class SGCCDailyBillSensor(SGCCBaseSensor):
@@ -233,8 +257,8 @@ class SGCCDailyBillSensor(SGCCBaseSensor):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_ENERGY
+        return SensorDeviceClass.ENERGY
 
     @property
     def unit_of_measurement(self):
-        return ENERGY_KILO_WATT_HOUR
+        return UnitOfEnergy.KILO_WATT_HOUR

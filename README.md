@@ -1,11 +1,9 @@
-# 北京用电信息查询2023
-> 目前原作者已经不维护了，我fork出一个版本用于新功能的维护。
+# 北京用电信息查询
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Stable](https://img.shields.io/github/v/release/georgezhao2010/bj_sgcc_energy)](https://github.com/jianyun8023/bj_sgcc_energy_2023/releases/latest)
+[![Stable](https://img.shields.io/github/v/release/georgezhao2010/bj_sgcc_energy)](https://github.com/georgezhao2010/bj_sgcc_energy/releases/latest)
 
 通过“国网北京电力”微信公众号的接口，采集你的家庭用电信息。
-
 
 # 使用之前
 首先关注“国网北京电力”微信公众号，打开微营业厅->个人中心->户号关联，确保你至少已关联一个北京国网电力的户号。如果没有关联，在此进行户号关联操作。此时点开微营业厅，应已经可以看到关联的用户，点击用户，可以看到该用户的用电信息。
@@ -16,7 +14,7 @@
 
 
 # 安装
-使用HACS以自定义存储库方式安装，或者从[Latest release](https://github.com/jianyun8023/bj_sgcc_energy_2023/releases/latest)下载最新的Release版本，将其中的`custom_components/bj_sgcc_engergy`放到你的Home Assistant的`custom_components/bj_sgcc_engergy`中。
+使用HACS以自定义存储库方式安装，或者从[Latest release](https://github.com/georgezhao2010/bj_sgcc_energy/releases/latest)下载最新的Release版本，将其中的`custom_components/bj_sgcc_engergy`放到你的Home Assistant的`custom_components/bj_sgcc_engergy`中。
 
 # 配置
 在configuration.yaml中，增加配置如下：
@@ -100,6 +98,5 @@ cards:
 你也可以根据需要采用自己的展示形式
 
 # 特别鸣谢
-[@georgezhao2010] 基于@georgezhao2010的代码进行二次开发。
 [瀚思彼岸论坛](https://bbs.hassbian.com/)的[@crazysiri](https://bbs.hassbian.com/thread-13355-1-1.html)，直接使用了他的部分代码。
 

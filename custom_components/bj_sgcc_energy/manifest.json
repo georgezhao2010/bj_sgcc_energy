@@ -1,15 +1,12 @@
 {
   "domain": "bj_sgcc_energy",
-  "name": "\u5317\u4eac\u7528\u7535\u4fe1\u606f\u67e5\u8be2",
-  "codeowners": [
-    "@jianyun8023","@georgezhao2010"
-  ],
+  "name": "北京用电信息查询",
+  "version": "v0.2.3",
+  "documentation": "https://github.com/georgezhao2010/bj_sgcc_energy",
+  "issue_tracker": "https://github.com/georgezhao2010/bj_sgcc_energy/issues",
+  "iot_class": "cloud_polling",
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://www.home-assistant.io/integrations/bj_sgcc_energy",
-  "homekit": {},
-  "iot_class": "cloud_polling",
   "requirements": [],
-  "ssdp": [],
-  "zeroconf": []
+  "codeowners": ["@georgezhao2010","@jianyun8023"]
 }
