@@ -8,5 +8,5 @@
   "config_flow": true,
   "dependencies": [],
   "requirements": [],
-  "codeowners": ["@georgezhao2010","@jianyun8023"]
+  "codeowners": ["@georgezhao2010"]
 }

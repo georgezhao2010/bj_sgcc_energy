@@ -1,12 +1,15 @@
 import asyncio
 import datetime
 import json
+import logging
 
 import async_timeout
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from .const import PGC_PRICE, LOGGER
+from .const import PGC_PRICE
+
+_LOGGER = logging.getLogger(__name__)
 
 AUTH_URL = "http://weixin.bj.sgcc.com.cn/ott/app/auth/authorize?target=M_WYYT"
 CONSNO_URL = "http://weixin.bj.sgcc.com.cn/ott/app/follower/bound/cons"
@@ -39,7 +42,7 @@ class GJDWCorrdinator:
         except asyncio.TimeoutError as ex:
             raise UpdateFailed("Data update timed out") from ex
         except Exception as ex:
-            LOGGER.error(
+            _LOGGER.error(
                 "Failed to data update with unknown reason: %(ex)s", {"ex": str(ex)}
             )
             raise UpdateFailed("Failed to data update with unknown reason") from ex
@@ -99,7 +102,7 @@ class SGCCData:
             if location and str.find(location, "connect_redirect") > 0:
                 raise AuthFailed("Invalid open-id")
         else:
-            LOGGER.error(f"async_get_token response status_code = {r.status}")
+            _LOGGER.error(f"async_get_token response status_code = {r.status}")
             raise AuthFailed(f"Authentication unexpected response code {r.status}")
 
     def commonHeaders(self):
@@ -211,10 +214,10 @@ class SGCCData:
                 self._info[consNo]["year"] = int(data["CURRENT_YEAR"])
             else:
                 ret = False
-                LOGGER.error(f"get_detail error: {result['msg']}")
+                _LOGGER.error(f"get_detail error: {result['msg']}")
         else:
             ret = False
-            LOGGER.error(f"get_detail response status_code = {r.status_code}")
+            _LOGGER.error(f"get_detail response status_code = {r.status_code}")
         return ret
 
     async def get_monthly_bill(self, consNo):
@@ -255,11 +258,11 @@ class SGCCData:
                             self._info[consNo]["history"][11 - n]["consume_bill"] = monthBills[period + n][
                                 "SUM_ELECBILL"]
                 else:
-                    LOGGER.error(f"get_monthly_bill error: {result['msg']}")
+                    _LOGGER.error(f"get_monthly_bill error: {result['msg']}")
                     ret = False
                     break
             else:
-                LOGGER.error(f"get_monthly_bill response status_code = {r.status_code}, params = {data}")
+                _LOGGER.error(f"get_monthly_bill response status_code = {r.status_code}, params = {data}")
                 ret = False
                 break
         return ret
@@ -302,5 +305,5 @@ class SGCCData:
                 self.get_daily_bills(consNo)
             ]
             await asyncio.gather(*tasks)
-        LOGGER.debug(f"Data {self._info}")
+        _LOGGER.debug(f"Data {self._info}")
         return self._info

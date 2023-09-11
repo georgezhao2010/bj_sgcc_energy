@@ -1,7 +1,4 @@
 """Constants for the 北京用电信息查询 integration."""
-import logging
-from datetime import timedelta
-
 DOMAIN = "bj_sgcc_energy"
 
 PGC_PRICE = [
@@ -23,7 +20,3 @@ PGC_PRICE = [
         "time_slot": [[23, 7]]
     }
 ]
-
-LOGGER = logging.getLogger(__name__)
-
-UPDATE_INTERVAL = timedelta(minutes=10)

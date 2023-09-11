@@ -1,6 +1,7 @@
 """Config flow for 北京用电信息查询 integration."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -12,8 +13,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import selector
 from requests import RequestException
 
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN
 from .sgcc import SGCCData, InvalidData
+
+_LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -35,7 +38,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             cons_nos = await api.async_get_cons_nos()
             return {"cons_nos": cons_nos, "openid": data["openid"]}
         except InvalidData as exc:
-            LOGGER.error(exc)
+            _LOGGER.error(exc)
             raise InvalidAuth
         except RequestException:
             raise CannotConnect
@@ -62,7 +65,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
             except Exception:  # pylint: disable=broad-except
-                LOGGER.exception("Unexpected exception")
+                _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
                 self.data = info

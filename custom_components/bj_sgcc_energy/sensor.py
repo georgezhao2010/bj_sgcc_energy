@@ -1,3 +1,6 @@
+import logging
+from datetime import timedelta
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
 )
@@ -7,8 +10,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import DOMAIN, UPDATE_INTERVAL, LOGGER
+from .const import DOMAIN
 from .sgcc import GJDWCorrdinator
+
+_LOGGER = logging.getLogger(__name__)
+
+UPDATE_INTERVAL = timedelta(minutes=10)
 
 SGCC_SENSORS = {
     "balance": {
@@ -63,12 +70,12 @@ async def async_setup_entry(
 
     coordinator = DataUpdateCoordinator(
         hass,
-        LOGGER,
+        _LOGGER,
         name=DOMAIN,
         update_interval=UPDATE_INTERVAL,
         update_method=api.async_update_data,
     )
-    LOGGER.info("async_setup_entry: " + str(coordinator))
+    _LOGGER.info("async_setup_entry: " + str(coordinator))
     await coordinator.async_refresh()
     data = coordinator.data
     sgcc_sensors_keys = SGCC_SENSORS.keys()
@@ -76,13 +83,11 @@ async def async_setup_entry(
         for key in sgcc_sensors_keys:
             if key in values.keys():
                 sensors.append(SGCCSensor(coordinator, cons_no, key))
-
         for month in range(12):
             sensors.append(SGCCHistorySensor(coordinator, cons_no, month))
         for day in range(30):
             sensors.append(SGCCDailyBillSensor(coordinator, cons_no, day))
     async_add_entities(sensors, False)
-    return None
 
 
 class SGCCBaseSensor(CoordinatorEntity):
