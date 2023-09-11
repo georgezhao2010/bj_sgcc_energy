@@ -17,15 +17,15 @@
 使用HACS以自定义存储库方式安装，或者从[Latest release](https://github.com/georgezhao2010/bj_sgcc_energy/releases/latest)下载最新的Release版本，将其中的`custom_components/bj_sgcc_engergy`放到你的Home Assistant的`custom_components/bj_sgcc_engergy`中。
 
 # 配置
-在configuration.yaml中，增加配置如下：
-```
-bj_sgcc_energy:
-  openid: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' #此为微信公众号中抓取的openid
-```
-重新启动Home Assistant
+
+通过UI配置，在集成-北京用电信息查询中，输入openid，然后选择户号即可。
+
+![config1](images/config1.png)
+
+![config2](images/config2.png)
 
 # 特性
-- 如果公众号中关联了多个北京国电用户，则支持多个用户用电信息的采集。
+- 支持多用户用电信息的采集。
 - 支持实时用电单价实体，可用于Home Assistant 2021.8.X最新的能源模块的实时电费计算。
 - 数据为定时更新，更新间隔为10分钟。
 - 支持北京市居民的阶梯用电计价策略
