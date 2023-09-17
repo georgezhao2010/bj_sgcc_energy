@@ -1,67 +1,93 @@
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.const import(
-    DEVICE_CLASS_ENERGY,
-    ENERGY_KILO_WATT_HOUR,
-    STATE_UNKNOWN
+import logging
+from datetime import timedelta
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfEnergy, STATE_UNKNOWN
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+
 from .const import DOMAIN
+from .sgcc import GJDWCorrdinator
+
+_LOGGER = logging.getLogger(__name__)
+
+UPDATE_INTERVAL = timedelta(minutes=10)
 
 SGCC_SENSORS = {
     "balance": {
         "name": "电费余额",
         "icon": "hass:cash-100",
         "unit_of_measurement": "元",
-        "attributes": ["last_update"]
+        "attributes": ["last_update"],
     },
-    "current_level": {
-        "name": "当前用电阶梯",
-        "icon": "hass:stairs"
-    },
+    "current_level": {"name": "当前用电阶梯", "icon": "hass:stairs"},
     "current_price": {
         "name": "当前电价",
         "icon": "hass:cash-100",
-        "unit_of_measurement": "CNY/kWh"
+        "unit_of_measurement": "CNY/kWh",
     },
     "current_level_consume": {
         "name": "当前阶梯用电",
-        "device_class": DEVICE_CLASS_ENERGY,
-        "unit_of_measurement": ENERGY_KILO_WATT_HOUR
+        "device_class": SensorDeviceClass.ENERGY,
+        "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
     },
     "current_level_remain": {
         "name": "当前阶梯剩余额度",
-        "device_class": DEVICE_CLASS_ENERGY,
-        "unit_of_measurement": ENERGY_KILO_WATT_HOUR
+        "device_class": SensorDeviceClass.ENERGY,
+        "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
     },
     "year_consume": {
         "name": "本年度用电量",
-        "device_class": DEVICE_CLASS_ENERGY,
-        "unit_of_measurement": ENERGY_KILO_WATT_HOUR
+        "device_class": SensorDeviceClass.ENERGY,
+        "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
     },
     "year_consume_bill": {
         "name": "本年度电费",
         "icon": "hass:cash-100",
-        "unit_of_measurement": "元"
+        "unit_of_measurement": "元",
     },
-    "current_pgv_type": {
-        "name": "当前电价类别",
-        "icon": "hass:cash-100"
-    }
+    "current_pgv_type": {"name": "当前电价类别", "icon": "hass:cash-100"},
 }
 
 
-async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
+async def async_setup_entry(
+        hass: HomeAssistant,
+        config_entry: ConfigEntry,
+        async_add_entities: AddEntitiesCallback,
+):
     sensors = []
-    coordinator = hass.data[DOMAIN]
+    config = hass.data[DOMAIN][config_entry.entry_id]
+
+    openid = config.get("openid")
+    consNo = config.get("consNo")
+
+    api = GJDWCorrdinator(hass, openid, consNo)
+    hass.data[DOMAIN]["instance"] = api
+
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=DOMAIN,
+        update_interval=UPDATE_INTERVAL,
+        update_method=api.async_update_data,
+    )
+    _LOGGER.info("async_setup_entry: " + str(coordinator))
+    await coordinator.async_refresh()
     data = coordinator.data
+    sgcc_sensors_keys = SGCC_SENSORS.keys()
     for cons_no, values in data.items():
-        for key in SGCC_SENSORS.keys():
+        for key in sgcc_sensors_keys:
             if key in values.keys():
                 sensors.append(SGCCSensor(coordinator, cons_no, key))
         for month in range(12):
             sensors.append(SGCCHistorySensor(coordinator, cons_no, month))
         for day in range(30):
             sensors.append(SGCCDailyBillSensor(coordinator, cons_no, day))
-    async_add_devices(sensors, True)
+    async_add_entities(sensors, False)
 
 
 class SGCCBaseSensor(CoordinatorEntity):
@@ -89,7 +115,7 @@ class SGCCSensor(SGCCBaseSensor):
         self._unique_id = f"{DOMAIN}.{cons_no}_{sensor_key}"
         self.entity_id = self._unique_id
 
-    def get_value(self, attribute = None):
+    def get_value(self, attribute=None):
         try:
             if attribute is None:
                 return self._coordinator.data.get(self._cons_no).get(self._sensor_key)
@@ -141,14 +167,22 @@ class SGCCHistorySensor(SGCCBaseSensor):
     @property
     def name(self):
         try:
-            return self._coordinator.data.get(self._cons_no).get("history")[self._index].get("name")
+            return (
+                self._coordinator.data.get(self._cons_no)
+                .get("history")[self._index]
+                .get("name")
+            )
         except KeyError:
             return STATE_UNKNOWN
 
     @property
     def state(self):
         try:
-            return self._coordinator.data.get(self._cons_no).get("history")[self._index].get("consume")
+            return (
+                self._coordinator.data.get(self._cons_no)
+                .get("history")[self._index]
+                .get("consume")
+            )
         except KeyError:
             return STATE_UNKNOWN
 
@@ -156,18 +190,20 @@ class SGCCHistorySensor(SGCCBaseSensor):
     def extra_state_attributes(self):
         try:
             return {
-                "consume_bill": self._coordinator.data.get(self._cons_no).get("history")[self._index].get("consume_bill")
+                "consume_bill": self._coordinator.data.get(self._cons_no)
+                .get("history")[self._index]
+                .get("consume_bill")
             }
         except KeyError:
             return {"consume_bill": 0.0}
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_ENERGY
+        return SensorDeviceClass.ENERGY
 
     @property
     def unit_of_measurement(self):
-        return ENERGY_KILO_WATT_HOUR
+        return UnitOfEnergy.KILO_WATT_HOUR
 
 
 class SGCCDailyBillSensor(SGCCBaseSensor):
@@ -182,14 +218,22 @@ class SGCCDailyBillSensor(SGCCBaseSensor):
     @property
     def name(self):
         try:
-            return self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get("bill_date")
+            return (
+                self._coordinator.data.get(self._cons_no)
+                .get("daily_bills")[self._index]
+                .get("bill_date")
+            )
         except KeyError:
             return STATE_UNKNOWN
 
     @property
     def state(self):
         try:
-            return self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get("day_consume")
+            return (
+                self._coordinator.data.get(self._cons_no)
+                .get("daily_bills")[self._index]
+                .get("day_consume")
+            )
         except KeyError:
             return STATE_UNKNOWN
 
@@ -197,25 +241,29 @@ class SGCCDailyBillSensor(SGCCBaseSensor):
     def extra_state_attributes(self):
         try:
             return {
-                "bill_time": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
-                    "bill_time"),
-                "day_consume1": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
-                    "day_consume1"),
-                "day_consume2": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
-                    "day_consume2"),
-                "day_consume3": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
-                    "day_consume3"),
-                "day_consume4": self._coordinator.data.get(self._cons_no).get("daily_bills")[self._index].get(
-                    "day_consume4"),
-
+                "bill_time": self._coordinator.data.get(self._cons_no)
+                .get("daily_bills")[self._index]
+                .get("bill_time"),
+                "day_consume1": self._coordinator.data.get(self._cons_no)
+                .get("daily_bills")[self._index]
+                .get("day_consume1"),
+                "day_consume2": self._coordinator.data.get(self._cons_no)
+                .get("daily_bills")[self._index]
+                .get("day_consume2"),
+                "day_consume3": self._coordinator.data.get(self._cons_no)
+                .get("daily_bills")[self._index]
+                .get("day_consume3"),
+                "day_consume4": self._coordinator.data.get(self._cons_no)
+                .get("daily_bills")[self._index]
+                .get("day_consume4"),
             }
         except KeyError:
             return None
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_ENERGY
+        return SensorDeviceClass.ENERGY
 
     @property
     def unit_of_measurement(self):
-        return ENERGY_KILO_WATT_HOUR
+        return UnitOfEnergy.KILO_WATT_HOUR

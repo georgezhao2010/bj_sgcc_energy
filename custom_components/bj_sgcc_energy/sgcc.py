@@ -1,7 +1,11 @@
-import logging
+import asyncio
 import datetime
 import json
-import asyncio
+import logging
+
+import async_timeout
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .const import PGC_PRICE
 
@@ -16,6 +20,32 @@ DAILYBILL_URL = "http://weixin.bj.sgcc.com.cn/ott/app/electric/bill/daily"
 
 LEVEL_CONSUME = ["levelOneSum", "levelTwoSum", "levelThreeSum"]
 LEVEL_REMAIN = ["levelOneRemain", "levelTwoRemain"]
+
+
+class GJDWCorrdinator:
+    def __init__(self, hass, openid, consNo):
+        self._hass = hass
+        session = async_create_clientsession(hass)
+        self._sgcc = SGCCData(session, openid)
+        self._sgcc.set_ConsNo(consNo)
+
+    async def async_auth(self):
+        await self._sgcc.async_get_token()
+
+    async def async_update_data(self):
+        try:
+            async with async_timeout.timeout(60):
+                data = await self._sgcc.async_get_data()
+                if not data:
+                    raise UpdateFailed("Failed to data update")
+                return data
+        except asyncio.TimeoutError as ex:
+            raise UpdateFailed("Data update timed out") from ex
+        except Exception as ex:
+            _LOGGER.error(
+                "Failed to data update with unknown reason: %(ex)s", {"ex": str(ex)}
+            )
+            raise UpdateFailed("Failed to data update with unknown reason") from ex
 
 
 class AuthFailed(Exception):
@@ -68,7 +98,7 @@ class SGCCData:
         r = await self._session.get(AUTH_URL, headers=headers, allow_redirects=False, timeout=10)
         if r.status == 200 or r.status == 302:
             response_headers = self.tuple2list(r.raw_headers)
-            location = response_headers.get("Location") #这个OpenID有问题
+            location = response_headers.get("Location")  # 这个OpenID有问题
             if location and str.find(location, "connect_redirect") > 0:
                 raise AuthFailed("Invalid open-id")
         else:
@@ -92,7 +122,11 @@ class SGCCData:
         }
         return headers
 
-    async def async_get_ConsNo(self):
+    def set_ConsNo(self, consNo):
+        if consNo not in self._info:
+            self._info[consNo] = {}
+
+    async def async_load_ConsNo(self):
         headers = self.commonHeaders()
         r = await self._session.post(CONSNO_URL, headers=headers, timeout=10)
         if r.status == 200:
@@ -104,9 +138,26 @@ class SGCCData:
                     if consNo not in self._info:
                         self._info[consNo] = {}
             else:
-                raise InvalidData(f"async_get_ConsNo error: {result['msg']}")
+                raise InvalidData(f"async_load_ConsNo error: {result['msg']}")
         else:
-            raise InvalidData(f"async_get_ConsNo response status_code = {r.status_code}")
+            raise InvalidData(f"async_load_ConsNo response status_code = {r.status_code}")
+
+    async def async_get_cons_nos(self) -> dict[str, str]:
+        headers = self.commonHeaders()
+        r = await self._session.post(CONSNO_URL, headers=headers, timeout=10)
+        if r.status == 200:
+            result = json.loads(await r.read())
+            if result["status"] == 0:
+                cons_nos = {}
+                data = result["data"]
+                for single in data:
+                    cons_no = single["consNo"]
+                    cons_nos[cons_no] = single["consName"]
+                return cons_nos
+            else:
+                raise InvalidData(f"async_get_cons_nos error: {result['msg']}")
+        else:
+            raise InvalidData(f"async_get_cons_nos response status_code = {r.status_code}")
 
     async def aysnc_get_balance(self, consNo):
         headers = self.commonHeaders()
@@ -197,13 +248,15 @@ class SGCCData:
                             self._info[consNo]["history"][n] = {}
                             self._info[consNo]["history"][n]["name"] = monthBills[period - n - 1]["AMT_YM"]
                             self._info[consNo]["history"][n]["consume"] = monthBills[period - n - 1]["SUM_ELEC"]
-                            self._info[consNo]["history"][n]["consume_bill"] = monthBills[period - n - 1]["SUM_ELECBILL"]
+                            self._info[consNo]["history"][n]["consume_bill"] = monthBills[period - n - 1][
+                                "SUM_ELECBILL"]
                     else:
                         for n in range(12 - period):
                             self._info[consNo]["history"][11 - n] = {}
                             self._info[consNo]["history"][11 - n]["name"] = monthBills[period + n]["AMT_YM"]
                             self._info[consNo]["history"][11 - n]["consume"] = monthBills[period + n]["SUM_ELEC"]
-                            self._info[consNo]["history"][11 - n]["consume_bill"] = monthBills[period + n]["SUM_ELECBILL"]
+                            self._info[consNo]["history"][11 - n]["consume_bill"] = monthBills[period + n][
+                                "SUM_ELECBILL"]
                 else:
                     _LOGGER.error(f"get_monthly_bill error: {result['msg']}")
                     ret = False
@@ -243,10 +296,7 @@ class SGCCData:
         return ret
 
     async def async_get_data(self):
-        self._info = {}
-
         await self.async_get_token()
-        await self.async_get_ConsNo()
         for consNo in self._info.keys():
             await self.async_get_detail(consNo)
             tasks = [
@@ -255,6 +305,5 @@ class SGCCData:
                 self.get_daily_bills(consNo)
             ]
             await asyncio.gather(*tasks)
-            _LOGGER.debug(f"Data {self._info}")
+        _LOGGER.debug(f"Data {self._info}")
         return self._info
-

@@ -5,6 +5,7 @@
   "documentation": "https://github.com/georgezhao2010/bj_sgcc_energy",
   "issue_tracker": "https://github.com/georgezhao2010/bj_sgcc_energy/issues",
   "iot_class": "cloud_polling",
+  "config_flow": true,
   "dependencies": [],
   "requirements": [],
   "codeowners": ["@georgezhao2010"]
